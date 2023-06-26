@@ -154,7 +154,7 @@ const Library = ({ navigation }: LibraryProps) => {
                                         <MusicCircle>
                                             {/* <McImage source={ Images.musicIcon } /> */}
                                             <CoverImage
-                                                // @ts-ignore
+                                                // @ts-ignore 
                                                 source={ item.path }
                                                 placeHolder={
                                                 'https://cdn2.iconfinder.com/data/icons/Qetto___icons_by_ampeross-d4njobq/256/library-music.png'
