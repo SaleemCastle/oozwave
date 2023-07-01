@@ -26,7 +26,7 @@ const Image = styled.Image<IProps>`
       ? props.size
         ? `${props.size}px`
         : `${Metrics.images.medium}px`
-      : `0px`}
+      : `0px`};
 `
 
 interface IProps {

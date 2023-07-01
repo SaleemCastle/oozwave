@@ -27,6 +27,8 @@ const logo = require('../assets/images/logo.png')
 const thumb1 = require('../assets/images/thumb_1.png')
 const songCover = require('../assets/images/song-cover.png')
 const DefaultMusicIcon = require('../assets/images/defaultmusicicon.jpg')
+const SampleDiscoverArt = require('../assets/images/sampeDiscoverImage.png')
+const SampleDiscoverArt2 = require('../assets/images/sampeDiscoverImage2.png')
 /** 
  * export the images object
  */
@@ -55,5 +57,7 @@ export default {
   thumb1,
   songCover,
   miniplay,
-  DefaultMusicIcon
+  DefaultMusicIcon,
+  SampleDiscoverArt,
+  SampleDiscoverArt2
 }

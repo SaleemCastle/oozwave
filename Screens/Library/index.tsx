@@ -7,7 +7,8 @@ import {
     ScrollView,
     TextInput,
     Pressable,
-    Animated, 
+    Animated,
+    Text, 
 } from 'react-native'
 import styled from 'styled-components/native'
 import { CoverImage } from 'react-native-get-music-files-v3dev-test'
@@ -19,13 +20,14 @@ import BottomBar from './BottomBar'
 import { Colors, Images, Metrics } from '../../Constants'
 import { dummyData } from '../../Mock'
 import { ITrack } from '../../Store/Actions/currentTrack.actions'
-import { McText, McImage, PlayButton } from '../../Components'
+import { McText, McImage, PlayButton, McVectorIcon } from '../../Components'
 import { styles } from './styles';
 import { useAppDispatch, useAppSelector } from '../../hooks/reduxHooks'
 import { IDummyPlaylist } from '../../Mock/Dummy'
 import { LibraryProps } from '../../types'
 import { useSelector } from 'react-redux'
 import { RootState } from '../../Store/store'
+import DiscoverCard from '../../Components/DiscoverCard'
  
 const Library = ({ navigation }: LibraryProps) => {
     const tracks = useAppSelector((state) => state.tracks)
@@ -56,9 +58,9 @@ const Library = ({ navigation }: LibraryProps) => {
         return (
             <View>
                 <View style={{
-                marginTop: 16,
-                marginLeft: index === 0 ? 24 : 0,
-                marginRight: index === dummyData.Playlists.length - 1 ? 0 : 24
+                    marginTop: 16,
+                    marginLeft: index === 0 ? 24 : 0,
+                    marginRight: index === dummyData.Playlists.length - 1 ? 0 : 24
                 }}>
 
                 <McImage source={ item.thumbnail } key={ index } style={{ marginBottom: 12 }}/>
@@ -77,113 +79,164 @@ const Library = ({ navigation }: LibraryProps) => {
             </View>
         )
     }
+    const _rederDiscoverCards = ({item, index}: { item: any , index: number }) => {
+        return (
+            <DiscoverCard cover={ item.cover } key={ index } title={ item.title } id={ item.id } bg={ item.bg }/>
+        )
+    }
+
+    const cards = [
+        {
+            id: 1,
+            cover: Images.SampleDiscoverArt,
+            title: 'Artist 100',
+            bg: Colors.accent
+        },
+        {
+            id: 2,
+            cover: Images.SampleDiscoverArt2,
+            title: 'Hot 100',
+            bg: Colors.primary
+        },
+        {
+            id: 3,
+            cover: Images.SampleDiscoverArt2,
+            title: 'Billboard 200',
+            bg: Colors.white
+        },
+        {
+            id: 14,
+            cover: Images.SampleDiscoverArt,
+            title: 'kpop 100',
+            bg: Colors.green300
+        },
+    ]
 
     return (
         <Container>
-            <StatusBar hidden />
+            <ScrollView showsVerticalScrollIndicator={ false }>
 
-            <McText 
-                bold 
-                size={ 28 } 
-                color={ Colors.primary }
-                style={{ marginLeft: Metrics.padding, marginTop: 12 }}
-            >
-                Library
-            </McText>
-            <SearchSection>
-                <McImage 
-                    source={ Images.search } 
-                    style={{ marginLeft: 16, marginRight: 12 }}  
-                />
-                <TextInput 
-                    placeholder='Song or Artist' 
-                    placeholderTextColor={ Colors.grey3 } 
-                    style={{
-                        color: Colors.grey4
-                    }}  
-                />
-            </SearchSection>
+                <StatusBar hidden />
 
-            <TitleSection>
-                <McText medium size={ 20 } color={ Colors.grey4 }>Discover</McText>
+                <McText 
+                    extra 
+                    size={ 28 } 
+                    color={ Colors.primary }
+                    style={{ marginLeft: Metrics.padding, marginTop: 12 }}
+                >
+                    Good evening
+                </McText>
+                <SearchSection>
+                    <McImage 
+                        source={ Images.search } 
+                        style={{ marginLeft: 16, marginRight: 12 }}  
+                    />
+                    <TextInput 
+                        placeholder='Song or Artist' 
+                        placeholderTextColor={ Colors.grey3 } 
+                        style={{
+                            color: Colors.grey4
+                        }}  
+                    />
+                </SearchSection>
 
-                <TouchableWithoutFeedback>
-                    <McImage source={ Images.chevronBlue } />
-                </TouchableWithoutFeedback>
-            </TitleSection>
+                <TitleSection>
+                    <McText medium size={ 20 } color={ Colors.grey4 }>Discover</McText>
 
-            <View>
+                    <TouchableWithoutFeedback>
+                        <McImage source={ Images.chevronBlue } />
+                    </TouchableWithoutFeedback>
+                </TitleSection>
+
+                <View>
+                    <FlatList 
+                        keyExtractor={ (item) => 'playlist_' + item.id }
+                        horizontal
+                        showsHorizontalScrollIndicator={ false }
+                        contentContainerStyle={{}}
+                        data={ dummyData.Playlists }
+                        renderItem={ _renderItem }
+                    />
+                </View>
+
                 <FlatList 
-                    keyExtractor={ (item) => 'playlist_' + item.id }
+                    keyExtractor={ (item) => 'discover' + item.id }
                     horizontal
                     showsHorizontalScrollIndicator={ false }
-                    contentContainerStyle={{}}
-                    data={ dummyData.Playlists }
-                    renderItem={ _renderItem }
+                    contentContainerStyle={{
+                        // flex: 1,
+                        paddingLeft: 24,
+                        justifyContent: 'space-between'
+                    }}
+                    data={ cards }
+                    renderItem={ _rederDiscoverCards }
                 />
-            </View>
 
-            <TitleSection>
-                <McText medium size={ 20 } color={ Colors.grey4 }>Favorite</McText>
+                {/* <DiscoverCard cover={ Images.SampleDiscoverArt }/>
+                <DiscoverCard cover={ Images.SampleDiscoverArt2 }/> */}
 
-                <TouchableWithoutFeedback>
-                    <McImage source={ Images.chevronBlue } />
-                </TouchableWithoutFeedback>
-            </TitleSection>
+                <TitleSection>
+                    <McText medium size={ 20 } color={ Colors.grey4 }>Favorite</McText>
 
-            <View style={{ height: 250 }}>
-                <ScrollView
-                    contentContainerStyle={{ marginTop: 14 }}
-                    showsVerticalScrollIndicator={ true }
-                    style={{ flex: 1 }}
-                >
-                {
-                    (tracks as unknown as ITrack).error 
-                    ?
-                    <McText>Error Loading Tracks</McText>
-                    :
-                    tracks.map((item: ITrack, index: number) => {
-                        return (
-                            <FavoriteItemView key={ index }>
+                    <TouchableWithoutFeedback>
+                        <McImage source={ Images.chevronBlue } />
+                    </TouchableWithoutFeedback>
+                </TitleSection>
 
-                                <TouchableWithoutFeedback onPress={() => {
-                                    navigation.navigate('Player', { selectedMusic: item })
-                                }}>
+                <View style={{ height: 250 }}>
+                    <ScrollView
+                        contentContainerStyle={{ marginTop: 14 }}
+                        showsVerticalScrollIndicator={ true }
+                        style={{ flex: 1 }}
+                    >
+                    {
+                        (tracks as unknown as ITrack).error 
+                        ?
+                        <McText>Error Loading Tracks</McText>
+                        :
+                        tracks.map((item: ITrack, index: number) => {
+                            return (
+                                <FavoriteItemView key={ index }>
 
-                                    <View style={{ flexDirection: 'row' }}>
-                                        <MusicCircle>
-                                            {/* <McImage source={ Images.musicIcon } /> */}
-                                            <CoverImage
-                                                // @ts-ignore 
-                                                source={ item.path }
-                                                placeHolder={
-                                                'https://cdn2.iconfinder.com/data/icons/Qetto___icons_by_ampeross-d4njobq/256/library-music.png'
-                                                }
-                                                width={ 42 }
-                                                height={ 42 }
-                                            />
-                                        </MusicCircle>
+                                    <TouchableWithoutFeedback onPress={() => {
+                                        navigation.navigate('Player', { selectedMusic: item })
+                                    }}>
 
-                                        <View style={{ marginLeft: 12 }}>
+                                        <View style={{ flexDirection: 'row' }}>
+                                            <MusicCircle>
+                                                {/* <McImage source={ Images.musicIcon } /> */}
+                                                <CoverImage
+                                                    // @ts-ignore 
+                                                    source={ item.path }
+                                                    placeHolder={
+                                                    'https://cdn2.iconfinder.com/data/icons/Qetto___icons_by_ampeross-d4njobq/256/library-music.png'
+                                                    }
+                                                    width={ 42 }
+                                                    height={ 42 }
+                                                />
+                                            </MusicCircle>
 
-                                            <McText semi size={ 14 } color={ Colors.grey5 } numberOfLines={ 2 }>
-                                                { item.title.length > 25 ? item.title.substring(0, 25).concat('...') : item.title }
-                                            </McText>
-                                            <McText medium size={ 12 } color= {Colors.grey3 } style={{ marginTop: 4 }}>{ item.artist }</McText>
+                                            <View style={{ marginLeft: 12 }}>
+
+                                                <McText semi size={ 14 } color={ Colors.grey5 } numberOfLines={ 2 }>
+                                                    { item.title.length > 25 ? item.title.substring(0, 25).concat('...') : item.title }
+                                                </McText>
+                                                <McText medium size={ 12 } color= {Colors.grey3 } style={{ marginTop: 4 }}>{ item.artist }</McText>
+
+                                            </View>
 
                                         </View>
+                                    </TouchableWithoutFeedback>
 
-                                    </View>
-                                </TouchableWithoutFeedback>
+                                    <McImage source={ Images.like } />
+                                </FavoriteItemView>
+                            )
+                        })
+                    }
+                    </ScrollView>
+                </View>
 
-                                <McImage source={ Images.like } />
-                            </FavoriteItemView>
-                        )
-                    })
-                }
-                </ScrollView>
-            </View>
-
+            </ScrollView>
             {
                 currentTrack?.title
                 ?

@@ -1,2 +1,2 @@
-import dummyData from './Dummy';
-export { dummyData };
+import dummyData from './Dummy'
+export { dummyData }
