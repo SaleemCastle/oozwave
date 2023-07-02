@@ -3,6 +3,6 @@
 import Library from './Library'
 import Player from './Player'
 import Onboarding from './Onboarding'
-// import TestPlayer from './TestPlayer'
+import Billboards from './Billboards'
 
-export {  Onboarding, Library, Player }
+export {  Onboarding, Library, Player, Billboards }

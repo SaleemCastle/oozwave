@@ -1,10 +1,7 @@
 import React from 'react'
-import { View, Text } from 'react-native';
-import styled from 'styled-components';
-import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Circle, G, Path } from 'react-native-svg';
+import { View, Text } from 'react-native'
+import styled from 'styled-components'
 
-import { McText, McImage } from '../../Components'
 import { Colors } from '../../Constants'
 
 interface IProps {
@@ -12,24 +9,24 @@ interface IProps {
 }
 
 const BottomBar = (props: IProps) => {
-  const { children } = props
-  return (
-    <Container>
-      
-      <View style={{
-          marginVertical: 7,
-          width: '100%', 
-          height: 70,
-          borderRadius: 70,
-          backgroundColor: Colors.secondary,
-          overflow: 'hidden'
-        }}
-      >
-        { children }
-      </View>
-      
-    </Container>
-  );
+    const { children } = props
+    return (
+        <Container>
+        
+        <View style={{
+                marginVertical: 7,
+                width: '100%', 
+                height: 70,
+                borderRadius: 70,
+                backgroundColor: Colors.secondary,
+                overflow: 'hidden'
+            }}
+        >
+            { children }
+        </View>
+        
+        </Container>
+    )
 }
 
 const Container = styled(View)`
@@ -40,6 +37,6 @@ const Container = styled(View)`
   flex-direction: row;
   justify-content: space-between;
   align-items: flex-start;
-`;
+`
 
-export default BottomBar;
+export default BottomBar

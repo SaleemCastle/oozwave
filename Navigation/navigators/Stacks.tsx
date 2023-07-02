@@ -2,13 +2,13 @@ import React from 'react'
 
 import { createStackNavigator } from '@react-navigation/stack'
 
-import { Onboarding, Library, Player } from '../../Screens'
+import { Onboarding, Library, Player, Billboards } from '../../Screens'
 import { RootStackParamList } from '../../types'
 
 const Stack = createStackNavigator<RootStackParamList>()
 
 interface IProps {
-  params?: any
+    params?: any
 }
 
 const Stacks = (props: IProps) => (
@@ -20,13 +20,13 @@ const Stacks = (props: IProps) => (
                 headerShown: false,
             }}
         /> */}
-        {/* <Stack.Screen
-            name="Profile" 
-            component={ Profile }
+        <Stack.Screen
+            name="Billboards" 
+            component={ Billboards }
             options={{
-                headerShown: true,
+                headerShown: false,
             }}
-        /> */}
+        />
         <Stack.Screen
             name="Onboarding"
             component={Onboarding}

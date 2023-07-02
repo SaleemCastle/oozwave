@@ -81,7 +81,7 @@ const Library = ({ navigation }: LibraryProps) => {
     }
     const _rederDiscoverCards = ({item, index}: { item: any , index: number }) => {
         return (
-            <DiscoverCard cover={ item.cover } key={ index } title={ item.title } id={ item.id } bg={ item.bg }/>
+            <DiscoverCard cover={ item.cover } key={ index } title={ item.title } id={ item.id } bg={ item.bg } onPress={ () => navigation.navigate('Billboards', { info: {  title: item.title } }) }/>
         )
     }
 
@@ -90,13 +90,13 @@ const Library = ({ navigation }: LibraryProps) => {
             id: 1,
             cover: Images.SampleDiscoverArt,
             title: 'Artist 100',
-            bg: Colors.accent
+            bg: Colors.primary
         },
         {
             id: 2,
             cover: Images.SampleDiscoverArt2,
             title: 'Hot 100',
-            bg: Colors.primary
+            bg: Colors.accent
         },
         {
             id: 3,
