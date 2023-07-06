@@ -14,6 +14,7 @@ const Billboards = ({ route }: BillboardsProps) => {
     return (
         <Container>
             <McText bold size={ 28 } color={ Colors.primary } style={{ marginBottom: 16 }}>{ title }</McText>
+            <MusicCoverBackground source={ Images.BillboardCover } style={{width: 400, height: 200, opacity: 0.5}}/>
             <ScrollView contentContainerStyle={{width: '100%'}} showsVerticalScrollIndicator={false}>
                 {
                     Object.values(billboard.content).map((item, index) => {
@@ -47,3 +48,11 @@ const Container = styled.View`
     background-color: ${ Colors.background };
     align-items: center;
 `
+
+const MusicCoverBackground = styled.ImageBackground`
+    width: 100%;
+    height: 200px;
+    background-position: center center;
+    /* background: coral; */
+`
+
