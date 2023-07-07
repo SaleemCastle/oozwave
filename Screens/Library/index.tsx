@@ -170,6 +170,8 @@ const Library = ({ navigation }: LibraryProps) => {
                     }}
                     data={ cards }
                     renderItem={ _rederDiscoverCards }
+                    snapToAlignment='start'
+                    snapToInterval={324}
                 />
 
                 {/* <DiscoverCard cover={ Images.SampleDiscoverArt }/>
@@ -244,9 +246,9 @@ const Library = ({ navigation }: LibraryProps) => {
                     <BottomBar>
                         <Animated.View style={{height: '100%', width: animatedWidth, backgroundColor: Colors.background, position: 'absolute', opacity: 0.3}}/>
                         <Pressable style={ styles.playerContainer } onPress={() => navigation.navigate('Player', { selectedMusic: currentTrack })}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start' }}>
                                 <McImage source={ Images.thumb1 } style={{ width: 38, height: 38 }} />
-                                <View style={{ marginLeft: 12, width: '70%' }}>
+                                <View style={{ marginLeft: 12}}>
                                     <McText bold size={ 12 } color={ Colors.grey5 }>{ currentTrack.title }</McText>
                                     <McText medium size={ 12 } color={ Colors.grey3 } style={{ marginTop: 4 }}>{ currentTrack?.artist }</McText>
                                 </View>

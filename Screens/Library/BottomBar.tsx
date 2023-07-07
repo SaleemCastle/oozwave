@@ -13,17 +13,17 @@ const BottomBar = (props: IProps) => {
     return (
         <Container>
         
-        <View style={{
-                marginVertical: 7,
-                width: '100%', 
-                height: 70,
-                borderRadius: 70,
-                backgroundColor: Colors.secondary,
-                overflow: 'hidden'
-            }}
-        >
-            { children }
-        </View>
+            <View style={{
+                    marginVertical: 7,
+                    width: '100%', 
+                    height: 70,
+                    borderRadius: 70,
+                    backgroundColor: Colors.secondary,
+                    overflow: 'hidden'
+                }}
+            >
+                { children }
+            </View>
         
         </Container>
     )
