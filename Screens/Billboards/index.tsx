@@ -53,6 +53,5 @@ const MusicCoverBackground = styled.ImageBackground`
     width: 100%;
     height: 200px;
     background-position: center center;
-    /* background: coral; */
 `
 

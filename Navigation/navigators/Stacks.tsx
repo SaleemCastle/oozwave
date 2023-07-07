@@ -48,13 +48,6 @@ const Stacks = (props: IProps) => (
                 headerShown: false,
             }}
         />
-        {/* <Stack.Screen
-            name="TestPlayer"
-            component={TestPlayer}
-            options={{
-                headerShown: false,
-            }}
-        /> */}
   </Stack.Navigator>
 )
 

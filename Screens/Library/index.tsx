@@ -172,9 +172,6 @@ const Library = ({ navigation }: LibraryProps) => {
                     renderItem={ _rederDiscoverCards }
                 />
 
-                {/* <DiscoverCard cover={ Images.SampleDiscoverArt }/>
-                <DiscoverCard cover={ Images.SampleDiscoverArt2 }/> */}
-
                 <TitleSection>
                     <McText medium size={ 20 } color={ Colors.grey4 }>Favorite</McText>
 
@@ -296,7 +293,6 @@ const MusicCircle = styled.View`
     width: 42px;
     height: 42px;
     border-radius: 42px;
-    /* background-color: ${Colors.secondary}; */
     overflow: hidden;
     align-items: center;
     justify-content: center;
