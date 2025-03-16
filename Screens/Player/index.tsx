@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 
 import { StatusBar, TouchableOpacity, View } from 'react-native'
 
@@ -13,71 +13,61 @@ import { PlayerProps } from '../../types'
 import { setCurrentPlayerState } from '../../Store/Actions/playerState.actions'
 import { useAppDispatch, useAppSelector } from '../../hooks/reduxHooks'
 import { CoverImage } from 'react-native-get-music-files-v3dev-test'
-// import { RouteProp, useNavigation } from '@react-navigation/native'
-
-// interface IProps {
-//   route: RouteProp<{ params: { selectedMusic: ITrack } }, 'params'>
-// }
  
 const Player = ({ navigation, route }: PlayerProps) => {
     const currentPlayerState = useAppSelector((state) => state.currentPlayerState.playerState)
     const currentTrack = useAppSelector((state) => state.currentTrack)
     const [selectedTrack, setSelectedMusic] = useState({} as ITrack)
     const [isPlaying, setPlaying] = useState(false)
-    const progress = useProgress(100)
+    const progress = useProgress(1)
     const dispatch = useAppDispatch()
     // const navigator = useNavigation()
 
     const { selectedMusic } = route.params
 
-    const formatDuration = (ms: number) => {
-            let minutes = Math.floor(ms / 60000)
-            let seconds = ((ms % 60000) / 1000).toFixed(0)
-            return minutes + ":" + (+seconds < 10 ? '0' : '') + seconds
-    }
+    const formatDuration = useCallback((ms: number) => {
+        let minutes = Math.floor(ms / 60000)
+        let seconds = ((ms % 60000) / 1000).toFixed(0)
+        return minutes + ":" + (+seconds < 10 ? '0' : '') + seconds
+    },[])
 
-    const startTrack = async () => {
-        // Reset player state
-        // await TrackPlayer.reset()
-        
+    const getPlayerState = useCallback(async () => {
+        const state = (await TrackPlayer.getState()).toString()
+        dispatch(setCurrentPlayerState(state))
+        setPlaying(state === State.Playing.toString())
+    }, [dispatch, setPlaying])
+
+    const playTrack = useCallback(async () => {
         const current = await TrackPlayer.getCurrentTrack()
         const trackObject = await TrackPlayer.getTrack(current === null ? 0 : current).catch((err) => console.warn('track not found', err))
+        dispatch(setCurrentTrack({ ...selectedMusic }))
         
-        dispatch(setCurrentTrack({ ...selectedMusic}))
-        TrackPlayer.play()
         setPlaying(true)
-        // getPlayerState()
-    }
+        await TrackPlayer.play()
+    }, [dispatch, setPlaying])
 
-    const pauseTrack = async () => {
-            TrackPlayer.pause()
-            setPlaying(false)
-            getPlayerState()
-    }
-
-    const getPlayerState = async () => {
-            const state = (await TrackPlayer.getState()).toString()
-
-            dispatch(setCurrentPlayerState(state))
-            setPlaying(state === State.Playing.toString())
-    }
+    const pauseTrack = useCallback(async () => {
+        setPlaying(false)
+        await TrackPlayer.pause()
+        getPlayerState()
+    }, [])
     
     useEffect(() => {
-            getPlayerState()
-            setSelectedMusic(selectedMusic)
+        getPlayerState()
+        setSelectedMusic(selectedMusic)
 
-            if (currentTrack?.title.toString() !== selectedMusic?.title.toString()) {
+        if (currentTrack?.title.toString() !== selectedMusic?.title.toString()) {
             TrackPlayer.reset()
-            TrackPlayer.add({ ...selectedMusic, url: `file://${selectedMusic?.path}`, duration: +selectedMusic?.duration / 1000})
+            TrackPlayer.add({ ...selectedMusic, url: `file://${selectedMusic?.path}`, duration: +selectedMusic?.duration / 1000 })
             getPlayerState()
-            }
+        }
 
-            return() => {
+        return() => {
             if (currentPlayerState as string === 'stopped') {
                 TrackPlayer.reset()
             }
-            }
-    }, [])
+        }
+    }, [selectedMusic, currentPlayerState, currentTrack])
 
     return (
         <Container>
@@ -94,8 +84,9 @@ const Player = ({ navigation, route }: PlayerProps) => {
             </HeaderSection>
 
             <MusicDetailSection>
-                <McImage 
-                    source={ selectedTrack?.cover ? selectedTrack?.cover : Images.DefaultMusicIcon } 
+                {/* <McImage 
+                    //@ts-ignore
+                    source={ selectedTrack?.path ?? Images.DefaultMusicIcon } 
                     style={{
                         marginHorizontal: 81,
                         marginVertical: 60,
@@ -103,13 +94,16 @@ const Player = ({ navigation, route }: PlayerProps) => {
                         width: 214,
                         borderRadius: 214,
                     }}
-                />
-                {/* <CoverImage
-                    source={ selectedTrack?.path }
-                    placeHolder={ 'https://cdn2.iconfinder.com/data/icons/Qetto___icons_by_ampeross-d4njobq/256/library-music.png' }
-                    width={ 214 }
-                    height={ 214 }
                 /> */}
+                <View style={{ marginHorizontal: 81, marginVertical: 60, borderRadius: 214 }}>
+                    <CoverImage
+                    //@ts-ignore
+                        source={ selectedTrack?.path }
+                        placeHolder={ 'https://cdn2.iconfinder.com/data/icons/Qetto___icons_by_ampeross-d4njobq/256/library-music.png' }
+                        width={ 214 }
+                        height={ 214 }
+                    />
+                </View>
                 
                 <View style={{ marginTop: 16, justifyContent: 'center', alignItems: 'center' }}>
                     <McText semi size={ 24 } color={ Colors.grey5 } align='center'>
@@ -123,12 +117,12 @@ const Player = ({ navigation, route }: PlayerProps) => {
 
             <SliderSection>
                 <Slider
-                    minimumValue={ 0 }
-                    maximumValue={ progress.duration }
-                    value={ progress.position }
                     minimumTrackTintColor={ Colors.primary }
                     maximumTrackTintColor={ Colors.grey3 }
+                    maximumValue={ progress.duration }
                     thumbTintColor={ Colors.primary }
+                    value={ progress.position }
+                    minimumValue={ 0 }
                 >
 
                 </Slider>
@@ -164,9 +158,7 @@ const Player = ({ navigation, route }: PlayerProps) => {
                                 alignItems: 'center'
                             }}
                         >
-
-                            <PlayButton size={70} circle={62.82} icon={ isPlaying ? Images.pause : Images.play } onPress={ () => isPlaying ? pauseTrack() : startTrack() }/>
-
+                            <PlayButton size={ 70 } circle={ 62.82 } icon={ isPlaying ? Images.pause : Images.play } onPress={ isPlaying ? pauseTrack : playTrack }/>
                         </View>
 
                         <McImage source={ Images.next } style={{ marginRight: 24 }}/>

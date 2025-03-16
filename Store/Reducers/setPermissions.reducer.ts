@@ -7,12 +7,13 @@ const initialState = {
     error: false
 }
 
-const setPermissionReducer = (state = initialState, action: AnyAction) => {
+const setPermissionReducer = (state = initialState, action: AnyAction) => { 
     switch(action.type) {
         case SET_PERMISSIONS:
             return {
                 ...state,
-                ...action.payload
+                permission: action.payload,
+                error: false
             }
         case SET_PERMISSIONS_ERROR:
             return {

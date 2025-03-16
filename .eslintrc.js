@@ -1,9 +1,12 @@
 module.exports = {
     root: true,
-    extends: ['eslint:recommended', 'plugin:@typescript-eslint/recommended'],
+    extends: ['eslint:recommended', 'plugin:@typescript-eslint/recommended', 'plugin:react/recommended', 'plugin:react-native/all'],
     parser: '@typescript-eslint/parser',
     parserOptions: {project: ['./tsconfig.json']},
-    plugins: ['@typescript-eslint'],
+    plugins: ['@typescript-eslint', 'react', 'react-native'],
+    env: {
+        'react-native/react-native': true,
+    },
     rules: {
         indent: ['error', 4],
         'no-var': 'error',

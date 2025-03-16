@@ -5,9 +5,8 @@ export const styles = StyleSheet.create({
   playerContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignContent: 'center',
     alignItems: 'center',
-    marginHorizontal: 16,
-    marginVertical: 12
+    paddingHorizontal: 16,
+    paddingVertical: 12
   }
 })

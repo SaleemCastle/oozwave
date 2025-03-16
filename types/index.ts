@@ -28,7 +28,7 @@ export interface IBillboardProps {
     title: string
 }
 
-export interface IBillboardCardProps {
+export interface  IBillboardCardProps {
     artist: string,
     detail: string,
     last_week: string,
@@ -37,4 +37,10 @@ export interface IBillboardCardProps {
     title: string,
     weeks_at_no1?: string,
     weeks_on_chart: string
+}
+
+export enum PermissionStatus {
+    GRANTED = 'granted',
+    UNDETERMINED = 'undetermined',
+    DENIED = 'denied',
 }

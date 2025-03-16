@@ -1,25 +1,27 @@
 import { check, PERMISSIONS, RESULTS, request } from 'react-native-permissions'
 import { setPermission, setPermissionError } from '../Store/Actions/setPermissions.actions'
-import store from '../Store/store'
+
+import { PermissionsAndroid } from 'react-native'
+import { store } from '../Store/store'
 
 export function checkPermissions () {
     check(PERMISSIONS.ANDROID.READ_MEDIA_AUDIO)
         .then((result) => {
             switch (result) {
-            case RESULTS.UNAVAILABLE: store.dispatch(RESULTS.UNAVAILABLE)
+        case RESULTS.UNAVAILABLE: store.dispatch(setPermission(RESULTS.UNAVAILABLE))
                 break
             case RESULTS.DENIED: requestAudioPermission()
                 break
-            case RESULTS.LIMITED: store.dispatch(RESULTS.LIMITED)
+        case RESULTS.LIMITED: store.dispatch(setPermission(RESULTS.LIMITED))
                 break
-            case RESULTS.GRANTED: store.dispatch(RESULTS.GRANTED)
+        case RESULTS.GRANTED: store.dispatch(setPermission(RESULTS.GRANTED))
                 break
-            case RESULTS.BLOCKED: store.dispatch(RESULTS.BLOCKED)
+        case RESULTS.BLOCKED: store.dispatch(setPermission(RESULTS.BLOCKED))
                 break
             }
         })
         .catch((error) => {
-            // …
+            store.dispatch(setPermissionError(error))
         })
 }
 
@@ -33,6 +35,7 @@ export function requestAudioPermission () {
         buttonPositive: 'OK',
     }
     request(PERMISSIONS.ANDROID.READ_MEDIA_AUDIO, rationale).then((result) => {
+        console.log('Permission result from request ', result)
         // …
         if (result.includes('granted')) {
             store.dispatch(setPermission(RESULTS.GRANTED))

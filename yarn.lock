@@ -4102,14 +4102,6 @@ expo-modules-autolinking@^0.0.3:
     find-up "~5.0.0"
     fs-extra "^9.1.0"
 
-expo-modules-core@^1.2.7:
-  version "1.2.7"
-  resolved "https://registry.npmjs.org/expo-modules-core/-/expo-modules-core-1.2.7.tgz"
-  integrity sha512-sulqn2M8+tIdxi6QFkKppDEzbePAscgE2LEHocYoQOgHxJpeT7axE0Hkzc+81EeviQilZzGeFZMtNMGh3c9yJg==
-  dependencies:
-    compare-versions "^3.4.0"
-    invariant "^2.2.4"
-
 expo-modules-core@~0.2.0:
   version "0.2.0"
   resolved "https://registry.npmjs.org/expo-modules-core/-/expo-modules-core-0.2.0.tgz"

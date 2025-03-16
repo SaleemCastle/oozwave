@@ -29,7 +29,7 @@ const Stacks = (props: IProps) => (
         />
         <Stack.Screen
             name="Onboarding"
-            component={Onboarding}
+            component={ Onboarding }
             options={{
                 headerShown: false,
             }}

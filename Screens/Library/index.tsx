@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { memo, useCallback, useEffect, useState } from 'react'
 import { 
     StatusBar, 
     View,
@@ -8,7 +8,8 @@ import {
     TextInput,
     Pressable,
     Animated,
-    Text, 
+    Text,
+    Alert, 
 } from 'react-native'
 import styled from 'styled-components/native'
 import { CoverImage } from 'react-native-get-music-files-v3dev-test'
@@ -25,43 +26,56 @@ import { styles } from './styles';
 import { useAppDispatch, useAppSelector } from '../../hooks/reduxHooks'
 import { IDummyPlaylist } from '../../Mock/Dummy'
 import { LibraryProps } from '../../types'
-import { useSelector } from 'react-redux'
 import { RootState } from '../../Store/store'
 import DiscoverCard from '../../Components/DiscoverCard'
+import { setCurrentPlayerState } from '../../Store/Actions/playerState.actions'
+import TrackCarousel from '../../Components/TrackCarousel'
  
 const Library = ({ navigation }: LibraryProps) => {
-    const tracks = useAppSelector((state) => state.tracks)
+    const tracks: ITrack[] = useAppSelector((state) => state.tracks)
     const playerState = useAppSelector((state) => state.currentPlayerState.playerState)
     const currentTrack = useAppSelector((state) => state.currentTrack)
-    const [isPlaying, play] = useState(false)
-    const progress = useProgress(100)
+    const permission = useAppSelector((state: RootState) => state.permission)
+    const dispatch = useAppDispatch()
+    let isPlaying = playerState === State.Playing.toString()
+    const progress = useProgress(1)
 
-    const animation = new Animated.Value(Math.ceil((progress.position/progress.duration) * 100))
+    const DiscoverCardMemoized = memo(DiscoverCard)
+
+    const animation = new Animated.Value((progress.position / progress.duration) * 100)
     const inputRange = [0, 100]
     const outputRange = ["0%", "100%"]
-    const animatedWidth = animation.interpolate({inputRange, outputRange});
-    const permission = useSelector((state: RootState) => state.permission)
-    console.log('permission ', permission)
+    const animatedWidth = animation.interpolate({inputRange, outputRange})
+    console.log(isPlaying)
+    
+    const handleMiniPlayer = useCallback(async () => {
+        isPlaying ? await TrackPlayer.pause() : await TrackPlayer.play()
+    }, [isPlaying])
 
-    const handleMiniPlayer = async () => {
-        isPlaying ? TrackPlayer.pause() : TrackPlayer.play()
-        play(!isPlaying)
-    }
+    const getPlayerState = useCallback(async () => {
+        const state = (await TrackPlayer.getState()).toString()
+        dispatch(setCurrentPlayerState(state))
+        isPlaying = state === State.Playing.toString()
+    }, [dispatch, isPlaying])
 
     useEffect(() => {
-        play(playerState === State.Playing.toString())
+        getPlayerState()
+    })
 
-        return () => { }
-    }, [playerState])
+    const navToPlayer = useCallback((selectedTrack: ITrack) => {
+        navigation.navigate('Player', { selectedMusic: selectedTrack })
+    }, [])
 
-    const _renderItem = ({item, index}: { item: IDummyPlaylist , index: number }) => {
+    const _renderItem = useCallback(({item, index}: { item: IDummyPlaylist , index: number }) => {
         return (
-            <View>
-                <View style={{
+            <Pressable 
+                style={{
                     marginTop: 16,
                     marginLeft: index === 0 ? 24 : 0,
                     marginRight: index === dummyData.Playlists.length - 1 ? 0 : 24
-                }}>
+                }}
+                onPress={() => Alert.alert('This is ' + item.name)}
+            >
 
                 <McImage source={ item.thumbnail } key={ index } style={{ marginBottom: 12 }}/>
 
@@ -75,15 +89,21 @@ const Library = ({ navigation }: LibraryProps) => {
                 >
                     { item.songs } { `song${item.songs > 1 ? 's' : ''}` }
                 </McText>
-                </View>
-            </View>
+            </Pressable>
         )
-    }
-    const _rederDiscoverCards = ({item, index}: { item: any , index: number }) => {
+    }, [])
+    const _rederDiscoverCards = useCallback(({item, index}: { item: any , index: number }) => {
         return (
-            <DiscoverCard cover={ item.cover } key={ index } title={ item.title } id={ item.id } bg={ item.bg } onPress={ () => navigation.navigate('Billboards', { info: {  title: item.title } }) }/>
+            <DiscoverCardMemoized 
+                cover={ item.cover } 
+                key={ index } 
+                title={ item.title } 
+                id={ item.id } 
+                bg={ item.bg } 
+                onPress={ () => navigation.navigate('Billboards', { info: {  title: item.title } }) }
+            />
         )
-    }
+    }, [])
 
     const cards = [
         {
@@ -180,60 +200,22 @@ const Library = ({ navigation }: LibraryProps) => {
                     </TouchableWithoutFeedback>
                 </TitleSection>
 
-                <View style={{ height: 250 }}>
-                    <ScrollView
+                <View>
+                    {/* <ScrollView
                         contentContainerStyle={{ marginTop: 14 }}
                         showsVerticalScrollIndicator={ true }
                         style={{ flex: 1 }}
-                    >
+                    > */}
                     {
-                        (tracks as unknown as ITrack).error 
+                        !tracks.length 
                         ?
                         <McText>Error Loading Tracks</McText>
                         :
-                        tracks.map((item: ITrack, index: number) => {
-                            return (
-                                <FavoriteItemView key={ index }>
-
-                                    <TouchableWithoutFeedback onPress={() => {
-                                        navigation.navigate('Player', { selectedMusic: item })
-                                    }}>
-
-                                        <View style={{ flexDirection: 'row' }}>
-                                            <MusicCircle>
-                                                {/* <McImage source={ Images.musicIcon } /> */}
-                                                <CoverImage
-                                                    // @ts-ignore 
-                                                    source={ item.path }
-                                                    placeHolder={
-                                                    'https://cdn2.iconfinder.com/data/icons/Qetto___icons_by_ampeross-d4njobq/256/library-music.png'
-                                                    }
-                                                    width={ 42 }
-                                                    height={ 42 }
-                                                />
-                                            </MusicCircle>
-
-                                            <View style={{ marginLeft: 12 }}>
-
-                                                <McText semi size={ 14 } color={ Colors.grey5 } numberOfLines={ 2 }>
-                                                    { item.title.length > 25 ? item.title.substring(0, 25).concat('...') : item.title }
-                                                </McText>
-                                                <McText medium size={ 12 } color= {Colors.grey3 } style={{ marginTop: 4 }}>{ item.artist }</McText>
-
-                                            </View>
-
-                                        </View>
-                                    </TouchableWithoutFeedback>
-
-                                    <McImage source={ Images.like } />
-                                </FavoriteItemView>
-                            )
-                        })
+                        <TrackCarousel tracks={ tracks } handleNavigationToPlayer={ navToPlayer }/>
                     }
-                    </ScrollView>
+                    {/* </ScrollView> */}
                 </View>
-
-            </ScrollView>
+            </ScrollView> 
             {
                 currentTrack?.title
                 ?
@@ -241,11 +223,17 @@ const Library = ({ navigation }: LibraryProps) => {
                     <BottomBar>
                         <Animated.View style={{height: '100%', width: animatedWidth, backgroundColor: Colors.background, position: 'absolute', opacity: 0.3}}/>
                         <Pressable style={ styles.playerContainer } onPress={() => navigation.navigate('Player', { selectedMusic: currentTrack })}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-                                <McImage source={ Images.thumb1 } style={{ width: 38, height: 38 }} />
-                                <View style={{ marginLeft: 12, width: '70%' }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', flex: 1 }}>
+                            <CoverImage
+                                //@ts-ignore
+                                    src={ currentTrack?.path }
+                                    // placeHolder={ 'https://cdn2.iconfinder.com/data/icons/Qetto___icons_by_ampeross-d4njobq/256/library-music.png' }
+                                    // width={ 38 }
+                                    // height={ 38 }
+                                />
+                                <View style={{ marginLeft: 12, maxWidth: '70%' }}>
                                     <McText bold size={ 12 } color={ Colors.grey5 }>{ currentTrack.title }</McText>
-                                    <McText medium size={ 12 } color={ Colors.grey3 } style={{ marginTop: 4 }}>{ currentTrack?.artist }</McText>
+                                    <McText medium size={ 12 } color={ Colors.grey3 } style={{ marginTop: 4 }} numberOfLines={ 1 }>{ currentTrack?.artist }</McText>
                                 </View>
                             </View>
 
