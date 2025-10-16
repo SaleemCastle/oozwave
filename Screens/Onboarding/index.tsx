@@ -18,7 +18,8 @@ const Onboarding = ({ navigation }: OnboardingProps) => {
     const dispatch = useAppDispatch()
     const permission = useAppSelector((state: RootState) => state.permission)
     const [loading, setLoading] = useState(false)
-    useEffect(() =>{
+
+    useEffect(() => {
         TrackPlayer.updateOptions({
             android: {
                 appKilledPlaybackBehavior:
@@ -38,7 +39,7 @@ const Onboarding = ({ navigation }: OnboardingProps) => {
             ],
             progressUpdateEventInterval: 1,
         })
-    })
+    }, [])
     
     useEffect(() => {
         checkPermissions()
@@ -101,3 +102,4 @@ const Container = styled.SafeAreaView`
 `;
 
 export default Onboarding
+

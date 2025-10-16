@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+﻿import React, { useCallback, useEffect, useState } from 'react'
 
 import { StatusBar, TouchableOpacity, View } from 'react-native'
 
@@ -21,53 +21,102 @@ const Player = ({ navigation, route }: PlayerProps) => {
     const [isPlaying, setPlaying] = useState(false)
     const progress = useProgress(1)
     const dispatch = useAppDispatch()
-    // const navigator = useNavigation()
 
     const { selectedMusic } = route.params
 
     const formatDuration = useCallback((ms: number) => {
-        let minutes = Math.floor(ms / 60000)
-        let seconds = ((ms % 60000) / 1000).toFixed(0)
-        return minutes + ":" + (+seconds < 10 ? '0' : '') + seconds
-    },[])
+        const minutes = Math.floor(ms / 60000)
+        const seconds = Math.floor((ms % 60000) / 1000)
+        const paddedSeconds = seconds < 10 ? `0${seconds}` : seconds
+
+        return `${minutes}:${paddedSeconds}`
+    }, [])
 
     const getPlayerState = useCallback(async () => {
-        const state = (await TrackPlayer.getState()).toString()
-        dispatch(setCurrentPlayerState(state))
-        setPlaying(state === State.Playing.toString())
-    }, [dispatch, setPlaying])
+        const state = await TrackPlayer.getState()
+        const stateValue = state.toString()
+
+        dispatch(setCurrentPlayerState(stateValue))
+        setPlaying(state === State.Playing)
+
+        return stateValue
+    }, [dispatch])
 
     const playTrack = useCallback(async () => {
-        const current = await TrackPlayer.getCurrentTrack()
-        const trackObject = await TrackPlayer.getTrack(current === null ? 0 : current).catch((err) => console.warn('track not found', err))
-        dispatch(setCurrentTrack({ ...selectedMusic }))
-        
-        setPlaying(true)
-        await TrackPlayer.play()
-    }, [dispatch, setPlaying])
+        try {
+            setPlaying(true)
+            await TrackPlayer.play()
+        } catch (error) {
+            console.warn('Unable to play track', error)
+            setPlaying(false)
+        }
+    }, [])
 
     const pauseTrack = useCallback(async () => {
-        setPlaying(false)
-        await TrackPlayer.pause()
-        getPlayerState()
-    }, [])
+        try {
+            setPlaying(false)
+            await TrackPlayer.pause()
+            await getPlayerState()
+        } catch (error) {
+            console.warn('Unable to pause track', error)
+        }
+    }, [getPlayerState])
     
     useEffect(() => {
-        getPlayerState()
         setSelectedMusic(selectedMusic)
+    }, [selectedMusic])
 
-        if (currentTrack?.title.toString() !== selectedMusic?.title.toString()) {
-            TrackPlayer.reset()
-            TrackPlayer.add({ ...selectedMusic, url: `file://${selectedMusic?.path}`, duration: +selectedMusic?.duration / 1000 })
-            getPlayerState()
+    useEffect(() => {
+        getPlayerState()
+    }, [getPlayerState])
+
+    useEffect(() => {
+        let isMounted = true
+
+        const prepareQueue = async () => {
+            if (!selectedTrack?.id) {
+                return
+            }
+
+            const alreadyPrepared = currentTrack?.id === selectedTrack.id
+
+            if (alreadyPrepared) {
+                return
+            }
+
+            try {
+                await TrackPlayer.reset()
+                await TrackPlayer.add({
+                    ...selectedTrack,
+                    url: `file://${selectedTrack.path}`,
+                    duration: Number(selectedTrack.duration) / 1000,
+                })
+
+                if (!isMounted) {
+                    return
+                }
+
+                dispatch(setCurrentTrack({ ...selectedTrack }))
+                await getPlayerState()
+            } catch (error) {
+                console.warn('Failed to prepare track', error)
+            }
         }
 
-        return() => {
-            if (currentPlayerState as string === 'stopped') {
+        prepareQueue()
+
+        return () => {
+            isMounted = false
+        }
+    }, [currentTrack?.id, dispatch, getPlayerState, selectedTrack])
+
+    useEffect(() => {
+        return () => {
+            if (currentPlayerState === 'stopped') {
                 TrackPlayer.reset()
             }
         }
-    }, [selectedMusic, currentPlayerState, currentTrack])
+    }, [currentPlayerState])
 
     return (
         <Container>
@@ -84,17 +133,6 @@ const Player = ({ navigation, route }: PlayerProps) => {
             </HeaderSection>
 
             <MusicDetailSection>
-                {/* <McImage 
-                    //@ts-ignore
-                    source={ selectedTrack?.path ?? Images.DefaultMusicIcon } 
-                    style={{
-                        marginHorizontal: 81,
-                        marginVertical: 60,
-                        height: 214,
-                        width: 214,
-                        borderRadius: 214,
-                    }}
-                /> */}
                 <View style={{ marginHorizontal: 81, marginVertical: 60, borderRadius: 214 }}>
                     <CoverImage
                     //@ts-ignore
@@ -128,7 +166,7 @@ const Player = ({ navigation, route }: PlayerProps) => {
                 </Slider>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                     <McText size={ 12 } color={ Colors.grey4 }>{ formatDuration(Math.floor(progress.position * 1000)) }</McText>
-                    <McText size={ 12 } color={ Colors.grey4 }>{ formatDuration(selectedTrack?.duration) }</McText>
+                    <McText size={ 12 } color={ Colors.grey4 }>{ formatDuration(selectedTrack?.duration ?? 0) }</McText>
                 </View>
             </SliderSection>
 

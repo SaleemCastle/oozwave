@@ -1,0 +1,10 @@
+{
+    "name":  "react-native-get-music-files-v3dev-test",
+    "version":  "3.1.5-patched",
+    "description":  "Compatibility shim for legacy API using react-native-get-music-files",
+    "main":  "index.js",
+    "types":  "index.d.ts",
+    "dependencies":  {
+                         "react-native-get-music-files":  "^2.2.4"
+                     }
+}
