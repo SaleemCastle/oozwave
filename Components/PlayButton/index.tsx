@@ -1,5 +1,5 @@
-import React from 'react'
-import { View, Text, ImageSourcePropType, TouchableOpacity } from 'react-native'
+﻿import React, { useEffect, useMemo, useRef } from 'react'
+import { Animated, ImageSourcePropType, TouchableOpacity } from 'react-native'
 import Icon from 'react-native-vector-icons/FontAwesome'
 import styled from 'styled-components'
 import LinearGradient from 'react-native-linear-gradient'
@@ -17,48 +17,79 @@ interface IProps {
   onPress?: () => void
 }
 
-const defaultIcon = <Icon name="play" size={ 30 } color="#fff" />
+const AnimatedGradient = Animated.createAnimatedComponent(LinearGradient)
 
 const PlayButton = (props: IProps): React.ReactElement => {
     const { size, circle, icon, onPress } = props
+    const pulseValues = useRef([0, 1, 2].map(() => new Animated.Value(0))).current
+
+    useEffect(() => {
+        const animations = pulseValues.map((value, index) =>
+            Animated.loop(
+                Animated.sequence([
+                    Animated.delay(index * 120),
+                    Animated.timing(value, {
+                        toValue: 1,
+                        duration: 700,
+                        useNativeDriver: true,
+                    }),
+                    Animated.timing(value, {
+                        toValue: 0,
+                        duration: 700,
+                        useNativeDriver: true,
+                    }),
+                ]),
+            ),
+        )
+
+        animations.forEach(animation => animation.start())
+
+        return () => {
+            animations.forEach(animation => animation.stop())
+        }
+    }, [pulseValues])
+
+    const circleStyles = useMemo(
+        () => [
+            { style: { opacity: 0.5, position: 'absolute', left: 0, bottom: 0 } },
+            { style: { opacity: 0.5, position: 'absolute', right: 0, bottom: 0 } },
+            { style: { opacity: 0.5, position: 'absolute', top: 0 } },
+        ],
+        [],
+    )
+
     return (
         <Container size={ size } onPress={ onPress }>
+            {
+                icon
+                    ? <McImage source={ icon } style={{ position: 'relative', zIndex: 1 }}/>
+                    : <Icon name="play" size={ 30 } color="#fff" style={{ position: 'relative', zIndex: 1 }}/>
+            }
+            {
+                circleStyles.map(({ style }, index) => {
+                    const scale = pulseValues[index].interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [1, 1.08],
+                    })
 
-        <McImage source={ icon ?? defaultIcon as ImageSourcePropType } style={{ position: 'relative', zIndex: 1 }}/>
-
-        <Circle colors={ Colors.linearGradient1 } size={ size }
-            start={ start }
-            circle={ circle }
-            end={ end }
-            style={{
-            opacity: 0.5,
-            position: 'absolute',
-            left: 0,
-            bottom: 0
-            }}
-        />
-        <Circle colors={ Colors.linearGradient1 } size={ size }
-            start={ start }
-            circle={ circle }
-            end={ end }
-            style={{
-            opacity: 0.5,
-            position: 'absolute',
-            right: 0,
-            bottom: 0
-            }}
-        />
-        <Circle colors={ Colors.linearGradient1 } size={ size }
-            start={ start }
-            circle={ circle }
-            end={ end }
-            style={{
-            opacity: 0.5,
-            position: 'absolute',
-            top: 0,
-            }}
-        />
-
+                    return (
+                        <Circle
+                            key={ index }
+                            colors={ Colors.linearGradient1 }
+                            size={ size }
+                            circle={ circle }
+                            start={ start }
+                            end={ end }
+                            style={ [
+                                style,
+                                {
+                                    transform: [{ scale }],
+                                },
+                            ] }
+                        />
+                    )
+                })
+            }
         </Container>
     )
 }
@@ -70,11 +101,10 @@ const Container = styled(TouchableOpacity)<IProps>`
   align-items: center;
 `
 
-const Circle = styled(LinearGradient)<IProps>`
+const Circle = styled(AnimatedGradient)<IProps>`
   width: ${props => props.circle || 70}px;
   height: ${props => props.circle || 70}px;
   border-radius: ${props => props.circle ? props.circle : 70 / 2 || 70/2}px;
-
 `
 
 export default PlayButton
