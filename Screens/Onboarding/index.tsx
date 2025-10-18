@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { StatusBar, View } from 'react-native'
 import MusicFiles, { Constants, ResponseShape, ITrack as DeviceTrack } from 'react-native-get-music-files-v3dev-test'
 import styled from 'styled-components/native'
@@ -18,6 +18,8 @@ const SCAN_REQUEST_DELAY_MS = 100
 const Onboarding = ({ navigation }: OnboardingProps) => {
     const dispatch = useAppDispatch()
     const permission = useAppSelector((state: RootState) => state.permission)
+    const storedTracks = useAppSelector((state: RootState) => state.tracks)
+    const hasStoredTracks = useMemo(() => (storedTracks ?? []).some((track) => (track?.path ?? '').length > 0), [storedTracks])
 
     const [isScanning, setIsScanning] = useState(false)
     const [scanProgress, setScanProgress] = useState(0)
@@ -181,6 +183,14 @@ const Onboarding = ({ navigation }: OnboardingProps) => {
             return
         }
 
+        if (hasStoredTracks) {
+            setStatusMessage('Launching your library...')
+            setScanResult('success')
+            setScanProgress(100)
+            navigation.navigate('Library')
+            return
+        }
+
         if (permission.permission !== PermissionStatus.GRANTED) {
             setStatusMessage('We need storage access to scan for music. Please grant permission when prompted.')
             checkPermissions()
@@ -206,7 +216,7 @@ const Onboarding = ({ navigation }: OnboardingProps) => {
                 .then(handleScanSuccess)
                 .catch(handleScanError)
         }, SCAN_REQUEST_DELAY_MS)
-    }, [beginProgressLoop, clearScanRequestTimer, handleScanError, handleScanSuccess, isScanning, permission.permission])
+    }, [beginProgressLoop, clearScanRequestTimer, handleScanError, handleScanSuccess, hasStoredTracks, isScanning, navigation, permission.permission])
 
     return (
         <Container>

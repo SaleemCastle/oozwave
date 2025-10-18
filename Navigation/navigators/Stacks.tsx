@@ -2,7 +2,8 @@ import React from 'react'
 
 import { createStackNavigator } from '@react-navigation/stack'
 
-import { Onboarding, Library, Player, Billboards } from '../../Screens'
+import { Onboarding, Player, Billboards } from '../../Screens'
+import AppTabs from '../AppTabs'
 import { RootStackParamList } from '../../types'
 
 const Stack = createStackNavigator<RootStackParamList>()
@@ -36,7 +37,7 @@ const Stacks = (props: IProps) => (
         />
         <Stack.Screen
             name="Library"
-            component={ Library }
+            component={ AppTabs }
             options={{
                 headerShown: false,
             }}

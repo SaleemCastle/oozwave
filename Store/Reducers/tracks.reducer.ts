@@ -2,17 +2,7 @@ import { ADD_TRACKS, ADD_TRACKS_ERROR } from '../ReduxConstants'
 import { ITrack } from '../Actions/currentTrack.actions'
 import { AnyAction } from 'redux'
 
-const initialState: ITrack[] = [
-    {
-        album: '',
-        artist: '',
-        cover: '',
-        duration: 0,
-        id: 0,
-        path: '',
-        title: '',
-    },
-]
+const initialState: ITrack[] = []
 
 const addTracksReducer = (state = initialState, action: AnyAction) => {
     switch(action.type) {

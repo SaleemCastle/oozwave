@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useEffect, useState } from 'react'
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { 
     StatusBar, 
     View,
@@ -8,8 +8,9 @@ import {
     TextInput,
     Pressable,
     Animated,
-    Text,
-    Alert, 
+    Alert,
+    Easing,
+    StyleSheet, 
 } from 'react-native'
 import styled from 'styled-components/native'
 import { CoverImage } from 'react-native-get-music-files-v3dev-test'
@@ -22,6 +23,7 @@ import { Colors, Images, Metrics } from '../../Constants'
 import { dummyData } from '../../Mock'
 import { ITrack } from '../../Store/Actions/currentTrack.actions'
 import { McText, McImage, PlayButton, McVectorIcon } from '../../Components'
+import AppDrawer, { DrawerOption } from '../../Components/AppDrawer'
 import { styles } from './styles';
 import { useAppDispatch, useAppSelector } from '../../hooks/reduxHooks'
 import { IDummyPlaylist } from '../../Mock/Dummy'
@@ -30,7 +32,84 @@ import { RootState } from '../../Store/store'
 import DiscoverCard from '../../Components/DiscoverCard'
 import { setCurrentPlayerState } from '../../Store/Actions/playerState.actions'
 import TrackCarousel from '../../Components/TrackCarousel'
+// import { Easing } from 'react-native-reanimated'
  
+interface DrawerToggleButtonProps {
+
+    progress: Animated.Value
+    isOpen: boolean
+    onPress: () => void
+}
+
+
+
+const DrawerToggleButton: React.FC<DrawerToggleButtonProps> = ({ progress, isOpen, onPress }) => {
+
+    const topLineStyle = {
+
+        transform: [
+
+            { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [-6, 0] }) },
+
+            { rotate: progress.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '45deg'] }) },
+
+        ],
+
+    }
+
+
+
+    const middleLineStyle = {
+
+        opacity: progress.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 0, 0] }),
+
+    }
+
+
+
+    const bottomLineStyle = {
+
+        transform: [
+
+            { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [6, 0] }) },
+
+            { rotate: progress.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-45deg'] }) },
+
+        ],
+
+    }
+
+
+
+    return (
+
+        <Pressable
+
+            accessibilityRole='button'
+
+            accessibilityLabel={ isOpen ? 'Close menu' : 'Open menu' }
+
+            onPress={ onPress }
+
+            hitSlop={ 12 }
+
+            style={ toggleStyles.wrapper }
+
+        >
+
+            <Animated.View style={[toggleStyles.line, topLineStyle]} />
+
+            <Animated.View style={[toggleStyles.line, middleLineStyle]} />
+
+            <Animated.View style={[toggleStyles.line, bottomLineStyle]} />
+
+        </Pressable>
+
+    )
+
+}
+
+
 const Library = ({ navigation }: LibraryProps) => {
     const tracks: ITrack[] = useAppSelector((state) => state.tracks)
     const playerState = useAppSelector((state) => state.currentPlayerState.playerState)
@@ -45,9 +124,54 @@ const Library = ({ navigation }: LibraryProps) => {
     const animation = new Animated.Value((progress.position / progress.duration) * 100)
     const inputRange = [0, 100]
     const outputRange = ["0%", "100%"]
-    const animatedWidth = animation.interpolate({inputRange, outputRange})
-    console.log(isPlaying)
-    
+    const animatedWidth = animation.interpolate({ inputRange, outputRange })
+
+    const drawerProgress = useRef(new Animated.Value(0)).current
+    const [drawerOpen, setDrawerOpen] = useState(false)
+    const [drawerMounted, setDrawerMounted] = useState(false)
+
+    const drawerOptions = useMemo<DrawerOption[]>(() => [
+        { id: 'personalize', label: 'personalize', icon: 'star', accentColor: Colors.primary, onPress: () => Alert.alert('Personalize', 'Tailor your dashboard soon!') },
+        { id: 'preferences', label: 'preferences', icon: 'sliders', accentColor: Colors.accent, onPress: () => Alert.alert('Preferences', 'Preferences are coming soon!') },
+        { id: 'playlists', label: 'playlists', icon: 'list', accentColor: Colors.white, onPress: () => Alert.alert('Playlists', 'Manage playlists coming soon!') },
+        { id: 'equalizer', label: 'equalizer', icon: 'activity', accentColor: Colors.primary, onPress: () => Alert.alert('Equalizer', 'Fine-tune audio coming soon!') },
+        { id: 'downloads', label: 'downloads', icon: 'download-cloud', accentColor: Colors.accent, onPress: () => Alert.alert('Downloads', 'Offline downloads coming soon!') },
+        { id: 'support', label: 'support', icon: 'message-circle', accentColor: Colors.white, onPress: () => Alert.alert('Support', 'We\'re here to help!') },
+    ], [])
+
+    const openDrawer = useCallback(() => {
+        setDrawerOpen(true)
+        setDrawerMounted(true)
+        Animated.timing(drawerProgress, {
+            toValue: 1,
+            duration: 260,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+        }).start()
+    }, [drawerProgress])
+
+    const closeDrawer = useCallback(() => {
+        setDrawerOpen(false)
+        Animated.timing(drawerProgress, {
+            toValue: 0,
+            duration: 220,
+            easing: Easing.in(Easing.cubic),
+            useNativeDriver: true,
+        }).start(({ finished }) => {
+            if (finished) {
+                setDrawerMounted(false)
+            }
+        })
+    }, [drawerProgress])
+
+    const toggleDrawer = useCallback(() => {
+        if (drawerOpen) {
+            closeDrawer()
+        } else {
+            openDrawer()
+        }
+    }, [closeDrawer, drawerOpen, openDrawer])
+
     const handleMiniPlayer = useCallback(async () => {
         isPlaying ? await TrackPlayer.pause() : await TrackPlayer.play()
     }, [isPlaying])
@@ -65,6 +189,7 @@ const Library = ({ navigation }: LibraryProps) => {
     const navToPlayer = useCallback((selectedTrack: ITrack) => {
         navigation.navigate('Player', { selectedMusic: selectedTrack })
     }, [])
+
 
     const _renderItem = useCallback(({item, index}: { item: IDummyPlaylist , index: number }) => {
         return (
@@ -105,6 +230,7 @@ const Library = ({ navigation }: LibraryProps) => {
         )
     }, [])
 
+
     const cards = [
         {
             id: 1,
@@ -137,15 +263,16 @@ const Library = ({ navigation }: LibraryProps) => {
             <ScrollView showsVerticalScrollIndicator={ false }>
 
                 <StatusBar hidden />
-
-                <McText 
-                    extra 
-                    size={ 28 } 
-                    color={ Colors.primary }
-                    style={{ marginLeft: Metrics.padding, marginTop: 12 }}
-                >
-                    Good evening
-                </McText>
+                <HeaderRow>
+                    <McText extra size={ 24 } color={ Colors.primary }>
+                        Good evening
+                    </McText>
+                    <DrawerToggleButton
+                        progress={ drawerProgress }
+                        isOpen={ drawerOpen }
+                        onPress={ toggleDrawer }
+                    />
+                </HeaderRow>
                 <SearchSection>
                     <McImage 
                         source={ Images.search } 
@@ -192,20 +319,15 @@ const Library = ({ navigation }: LibraryProps) => {
                     renderItem={ _rederDiscoverCards }
                 />
 
-                <TitleSection>
+                {/* <TitleSection>
                     <McText medium size={ 20 } color={ Colors.grey4 }>Favorite</McText>
 
                     <TouchableWithoutFeedback>
                         <McImage source={ Images.chevronBlue } />
                     </TouchableWithoutFeedback>
-                </TitleSection>
+                </TitleSection> */}
 
-                <View>
-                    {/* <ScrollView
-                        contentContainerStyle={{ marginTop: 14 }}
-                        showsVerticalScrollIndicator={ true }
-                        style={{ flex: 1 }}
-                    > */}
+                {/* <View>
                     {
                         !tracks.length 
                         ?
@@ -213,11 +335,29 @@ const Library = ({ navigation }: LibraryProps) => {
                         :
                         <TrackCarousel tracks={ tracks } handleNavigationToPlayer={ navToPlayer }/>
                     }
-                    {/* </ScrollView> */}
-                </View>
+                </View> */}
             </ScrollView> 
+
+            { drawerMounted && (
+
+                <AppDrawer
+
+                    visible={ drawerMounted }
+
+                    progress={ drawerProgress }
+
+                    onClose={ closeDrawer }
+
+                    options={ drawerOptions }
+
+                />
+
+            ) }
+
             {
+
                 currentTrack?.title
+
                 ?
                 <BottomSection>
                     <BottomBar>
@@ -246,6 +386,30 @@ const Library = ({ navigation }: LibraryProps) => {
         </Container>
     )
 }
+
+const toggleStyles = StyleSheet.create({
+    wrapper: {
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    line: {
+        position: 'absolute',
+        width: 24,
+        height: 2,
+        borderRadius: 1,
+        backgroundColor: Colors.grey5,
+    },
+})
+
+const HeaderRow = styled.View`
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin: 12px ${Metrics.padding}px 0;
+    padding-right: ${Metrics.padding}px;
+`;
 
 const Container = styled.SafeAreaView`
     flex: 1;
