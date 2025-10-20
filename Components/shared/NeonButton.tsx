@@ -3,6 +3,7 @@ import { Pressable, PressableStateCallbackType, StyleProp, StyleSheet, Text, Tex
 import LinearGradient from 'react-native-linear-gradient'
 
 import tokens from '../../theme/tokens'
+import McText from '../McText'
 
 const { colors, shadows } = tokens
 
@@ -41,7 +42,8 @@ const NeonButton: React.FC<NeonButtonProps> = ({
         const content = (
             <View style={[styles.content, fullWidth && styles.fullWidth, state.pressed && styles.pressedContent]}>
                 { icon ? <View style={ styles.iconContainer }>{ icon }</View> : null }
-                <Text
+                <McText
+                    semi
                     style={[
                         styles.label,
                         variant === 'ghost' ? styles.ghostLabel : null,
@@ -50,7 +52,7 @@ const NeonButton: React.FC<NeonButtonProps> = ({
                     ]}
                 >
                     { title }
-                </Text>
+                </McText>
             </View>
         )
 
@@ -112,7 +114,6 @@ const styles = StyleSheet.create({
     },
     ghostBase: {
         paddingHorizontal: 20,
-        paddingVertical: 12,
         borderRadius: 999,
     },
     content: {

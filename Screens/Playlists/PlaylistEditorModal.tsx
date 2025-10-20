@@ -212,7 +212,12 @@ const PlaylistEditorModal: React.FC = () => {
                 />
 
                 <McText semi color={colors.pureWhite} style={ styles.label }>Accent color</McText>
-                <View style={ styles.optionsRow }>
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={ false }
+                    contentContainerStyle={ styles.optionsRow }
+                    style={ styles.optionsCarousel }
+                >
                     { COLOR_OPTIONS.map((option) => (
                         <Pressable
                             key={ option }
@@ -222,10 +227,15 @@ const PlaylistEditorModal: React.FC = () => {
                             style={[styles.colorSwatch, { backgroundColor: option }, color === option ? styles.colorSwatchSelected : null]}
                         />
                     )) }
-                </View>
+                </ScrollView>
 
                 <McText semi color={colors.pureWhite} style={ styles.label }>Emoji</McText>
-                <View style={ styles.optionsRow }>
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={ false }
+                    contentContainerStyle={ styles.optionsRow }
+                    style={ styles.optionsCarousel }
+                >
                     { EMOJI_OPTIONS.map((option) => (
                         <Pressable
                             key={ option }
@@ -237,7 +247,7 @@ const PlaylistEditorModal: React.FC = () => {
                             <Text style={ styles.emojiText }>{ option }</Text>
                         </Pressable>
                     )) }
-                </View>
+                </ScrollView>
 
                 <View style={ styles.toggleRow }>
                     <McText semi color={colors.pureWhite}>Public playlist</McText>
@@ -301,7 +311,7 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.purple800,
         paddingHorizontal: 16,
         paddingVertical: 14,
-        color: colors.grey5,
+        color: colors.pureWhite,
         fontSize: 16,
     },
     inputError: {
@@ -310,10 +320,15 @@ const styles = StyleSheet.create({
     multiline: {
         minHeight: 96,
     },
+    optionsCarousel: {
+        marginTop: 8,
+    },
     optionsRow: {
         flexDirection: 'row',
-        flexWrap: 'wrap',
-        marginTop: 8,
+        alignItems: 'center',
+        paddingRight: 12,
+        paddingVertical:2,
+        paddingLeft:2
     },
     colorSwatch: {
         width: 44,
@@ -322,10 +337,10 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: 'rgba(255,255,255,0.12)',
         marginRight: 12,
-        marginBottom: 12,
+        marginBottom: 0,
     },
     colorSwatchSelected: {
-        borderColor: colors.neonMagenta,
+        borderColor: colors.pureWhite,
         transform: [{ scale: 1.05 }],
     },
     emojiButton: {
@@ -338,7 +353,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 12,
-        marginBottom: 12,
+        marginBottom: 0,
     },
     emojiSelected: {
         borderColor: colors.neonMagenta,
@@ -369,6 +384,4 @@ const styles = StyleSheet.create({
         marginTop: 6,
     },
 })
-
-
 
