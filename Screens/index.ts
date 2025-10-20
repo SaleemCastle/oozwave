@@ -1,8 +1,7 @@
-// import Home from './Home'
-// import Profile from './Profile'
-import Library from './Library'
-import Player from './Player'
-import Onboarding from './Onboarding'
-import Billboards from './Billboards'
-
-export {  Onboarding, Library, Player, Billboards }
+export { default as Library } from './Library'
+export { default as Player } from './Player'
+export { default as Onboarding } from './Onboarding'
+export { default as Billboards } from './Billboards'
+export { default as PlaylistsScreen } from './Playlists/PlaylistsScreen'
+export { default as PlaylistDetailScreen } from './Playlists/PlaylistDetailScreen'
+export { default as PlaylistEditorModal } from './Playlists/PlaylistEditorModal'

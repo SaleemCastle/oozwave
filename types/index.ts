@@ -1,20 +1,27 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import { ITrack } from '../Store/Actions/currentTrack.actions'
-import { type } from 'os'
 import { ImageSourcePropType } from 'react-native'
 
+export type PlaylistsStackParamList = {
+    Playlists: undefined
+    PlaylistDetail: { playlistId: string }
+    PlaylistEditor: { mode: 'create' } | { mode: 'edit'; playlistId: string }
+}
+
 export type RootStackParamList = {
-    Onboarding: undefined,
-    Library: undefined,
-    Player: { selectedMusic: ITrack },
+    Onboarding: undefined
+    Library: undefined
+    Player: { selectedMusic: ITrack }
     Billboards: { info: IBillboardProps }
+    Playlists: undefined
+    PlaylistDetail: { playlistId: string }
+    PlaylistEditor: { mode: 'create' } | { mode: 'edit'; playlistId: string }
 }
 
 export type OnboardingProps = NativeStackScreenProps<RootStackParamList, 'Onboarding'>
 export type LibraryProps = NativeStackScreenProps<RootStackParamList, 'Library'>
 export type PlayerProps = NativeStackScreenProps<RootStackParamList, 'Player'>
 export type BillboardsProps = NativeStackScreenProps<RootStackParamList, 'Billboards'>
-
 
 export type DiscoverCardProps = {
     cover: ImageSourcePropType,

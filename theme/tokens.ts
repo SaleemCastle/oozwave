@@ -7,6 +7,7 @@ export const colors = {
     pureWhite: '#FFFFFF',
     deepShadow: 'rgba(0, 0, 0, 0.6)',
     glowMagenta: 'rgba(255, 0, 200, 0.35)',
+    grey5: '#5B5B6B'
 }
 
 export const radii = {

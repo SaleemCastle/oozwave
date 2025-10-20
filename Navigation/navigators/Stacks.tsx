@@ -2,7 +2,14 @@ import React from 'react'
 
 import { createStackNavigator } from '@react-navigation/stack'
 
-import { Onboarding, Player, Billboards } from '../../Screens'
+import {
+    Onboarding,
+    Player,
+    Billboards,
+    PlaylistsScreen,
+    PlaylistDetailScreen,
+    PlaylistEditorModal,
+} from '../../Screens'
 import AppTabs from '../AppTabs'
 import { RootStackParamList } from '../../types'
 
@@ -13,43 +20,58 @@ interface IProps {
 }
 
 const Stacks = (props: IProps) => (
-  <Stack.Navigator initialRouteName="Onboarding">
-        {/* <Stack.Screen
-            name="Home"
-            component={Home}
-            options={{
-                headerShown: false,
-            }}
-        /> */}
+    <Stack.Navigator initialRouteName='Onboarding'>
         <Stack.Screen
-            name="Billboards" 
+            name='Billboards'
             component={ Billboards }
             options={{
                 headerShown: false,
             }}
         />
         <Stack.Screen
-            name="Onboarding"
+            name='Onboarding'
             component={ Onboarding }
             options={{
                 headerShown: false,
             }}
         />
         <Stack.Screen
-            name="Library"
+            name='Library'
             component={ AppTabs }
             options={{
                 headerShown: false,
             }}
         />
         <Stack.Screen
-            name="Player"
+            name='Player'
             component={ Player }
             options={{
                 headerShown: false,
             }}
         />
-  </Stack.Navigator>
+        <Stack.Screen
+            name='Playlists'
+            component={ PlaylistsScreen }
+            options={{
+                headerShown: false,
+            }}
+        />
+        <Stack.Screen
+            name='PlaylistDetail'
+            component={ PlaylistDetailScreen }
+            options={{
+                headerShown: false,
+            }}
+        />
+        <Stack.Screen
+            name='PlaylistEditor'
+            component={ PlaylistEditorModal }
+            options={{
+                headerShown: false,
+                presentation: 'modal',
+            }}
+        />
+    </Stack.Navigator>
 )
 
 export default Stacks
