@@ -59,18 +59,13 @@ export default NeonCard
 
 const styles = StyleSheet.create({
     container: {
-        borderRadius: 24,
-        overflow: 'hidden',
         marginBottom: 16,
-        backgroundColor: 'rgba(12, 2, 28, 0.72)',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 0, 200, 0.24)',
-        ...shadows.neonPill,
+        height: 200,
+        width: 200,
+        // ...shadows.neonPill,
     },
     gradient: {
-        padding: 20,
-        borderRadius: 24,
-        borderWidth: 1,
+        padding: 8,
     },
     pressed: {
         transform: [{ scale: 0.98 }],

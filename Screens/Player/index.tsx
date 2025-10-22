@@ -1,114 +1,151 @@
-﻿import React, { useCallback, useEffect, useState } from 'react'
-
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { StatusBar, TouchableOpacity, View } from 'react-native'
-
-import styled from 'styled-components/native'
 import Slider from '@react-native-community/slider'
-import TrackPlayer, { State, useProgress } from 'react-native-track-player'
+import TrackPlayer, { State, usePlaybackState, useProgress } from 'react-native-track-player'
+import Icon from 'react-native-vector-icons/Feather'
+import styled from 'styled-components/native'
 
 import { Colors, Images } from '../../Constants'
-import { ITrack, setCurrentTrack } from '../../Store/Actions/currentTrack.actions'
+import { setCurrentTrack, ITrack } from '../../Store/Actions/currentTrack.actions'
+import { setCurrentPlayerState } from '../../Store/Actions/playerState.actions'
 import { McText, McImage, PlayButton } from '../../Components'
 import { PlayerProps } from '../../types'
-import { setCurrentPlayerState } from '../../Store/Actions/playerState.actions'
 import { useAppDispatch, useAppSelector } from '../../hooks/reduxHooks'
 import { CoverImage } from 'react-native-get-music-files-v3dev-test'
- 
-const Player = ({ navigation, route }: PlayerProps) => {
-    const currentPlayerState = useAppSelector((state) => state.currentPlayerState.playerState)
-    const currentTrack = useAppSelector((state) => state.currentTrack)
-    const [selectedTrack, setSelectedMusic] = useState({} as ITrack)
-    const [isPlaying, setPlaying] = useState(false)
-    const progress = useProgress(1)
+import {
+    selectCurrentQueueItem,
+    selectPlaybackMeta,
+    skipToNext,
+    skipToPrevious,
+    toggleShuffle,
+    cycleRepeatMode,
+    setPosition as setQueuePosition,
+} from '../../state/playerQueue'
+import { colors } from '../../theme/tokens'
+
+const formatDuration = (ms: number) => {
+    if (!ms || Number.isNaN(ms)) {
+        return '0:00'
+    }
+    const totalSeconds = Math.floor(ms / 1000)
+    const minutes = Math.floor(totalSeconds / 60)
+    const seconds = totalSeconds % 60
+    const paddedSeconds = seconds < 10 ? `0${seconds}` : `${seconds}`
+    return `${minutes}:${paddedSeconds}`
+}
+
+const Player = ({ navigation }: PlayerProps) => {
     const dispatch = useAppDispatch()
+    const playbackState = usePlaybackState()
+    const progress = useProgress(0.5)
+    const currentQueueItem = useAppSelector(selectCurrentQueueItem)
+    const playbackMeta = useAppSelector(selectPlaybackMeta)
+    const currentPlayerState = useAppSelector((state) => state.currentPlayerState.playerState)
+    const libraryTracks = useAppSelector((state) => state.tracks as ITrack[])
 
-    const { selectedMusic } = route.params
+    const [sliderValue, setSliderValue] = useState(0)
+    const [isSeeking, setIsSeeking] = useState(false)
 
-    const formatDuration = useCallback((ms: number) => {
-        const minutes = Math.floor(ms / 60000)
-        const seconds = Math.floor((ms % 60000) / 1000)
-        const paddedSeconds = seconds < 10 ? `0${seconds}` : seconds
+    const isPlaying = playbackState === State.Playing
+    const totalDurationMs = currentQueueItem?.duration ?? 0
+    const totalDurationSeconds = totalDurationMs / 1000
+    const sliderMax = useMemo(() => {
+        const duration = progress.duration > 0 ? progress.duration : totalDurationSeconds
+        if (duration > 0) {
+            return duration
+        }
+        return sliderValue > 0 ? sliderValue : 1
+    }, [progress.duration, totalDurationSeconds, sliderValue])
 
-        return `${minutes}:${paddedSeconds}`
-    }, [])
+    useEffect(() => {
+        if (!isSeeking) {
+            setSliderValue(progress.position)
+        }
+    }, [isSeeking, progress.position])
 
-    const getPlayerState = useCallback(async () => {
-        const state = await TrackPlayer.getState()
-        const stateValue = state.toString()
+    useEffect(() => {
+        if (!currentQueueItem) {
+            setSliderValue(0)
+        }
+    }, [currentQueueItem])
 
-        dispatch(setCurrentPlayerState(stateValue))
-        setPlaying(state === State.Playing)
+    useEffect(() => {
+        dispatch(setCurrentPlayerState(playbackState.toString()))
+    }, [dispatch, playbackState])
 
-        return stateValue
-    }, [dispatch])
+    useEffect(() => {
+        if (!currentQueueItem) {
+            return
+        }
+        const libraryTrack = libraryTracks?.find((track) => String(track.id) === currentQueueItem.id)
+        if (libraryTrack) {
+            dispatch(setCurrentTrack(libraryTrack))
+            return
+        }
+        const numericId = Number(currentQueueItem.id)
+        dispatch(setCurrentTrack({
+            id: Number.isNaN(numericId) ? 0 : numericId,
+            title: currentQueueItem.title,
+            artist: currentQueueItem.artist ?? '',
+            album: currentQueueItem.album ?? '',
+            duration: currentQueueItem.duration ?? 0,
+            path: currentQueueItem.path,
+            cover: currentQueueItem.artwork,
+        }))
+    }, [currentQueueItem, dispatch, libraryTracks])
 
-    const playTrack = useCallback(async () => {
+    const handlePlay = useCallback(async () => {
         try {
-            setPlaying(true)
             await TrackPlayer.play()
         } catch (error) {
             console.warn('Unable to play track', error)
-            setPlaying(false)
         }
     }, [])
 
-    const pauseTrack = useCallback(async () => {
+    const handlePause = useCallback(async () => {
         try {
-            setPlaying(false)
             await TrackPlayer.pause()
-            await getPlayerState()
         } catch (error) {
             console.warn('Unable to pause track', error)
         }
-    }, [getPlayerState])
-    
-    useEffect(() => {
-        setSelectedMusic(selectedMusic)
-    }, [selectedMusic])
+    }, [])
 
-    useEffect(() => {
-        getPlayerState()
-    }, [getPlayerState])
+    const handleSkipNext = useCallback(() => {
+        dispatch(skipToNext())
+    }, [dispatch])
 
-    useEffect(() => {
-        let isMounted = true
+    const handleSkipPrevious = useCallback(() => {
+        dispatch(skipToPrevious())
+    }, [dispatch])
 
-        const prepareQueue = async () => {
-            if (!selectedTrack?.id) {
-                return
-            }
+    const handleToggleShuffle = useCallback(() => {
+        dispatch(toggleShuffle())
+    }, [dispatch])
 
-            const alreadyPrepared = currentTrack?.id === selectedTrack.id
+    const handleCycleRepeat = useCallback(() => {
+        dispatch(cycleRepeatMode())
+    }, [dispatch])
 
-            if (alreadyPrepared) {
-                return
-            }
+    const handleSliderValueChange = useCallback((value: number) => {
+        setSliderValue(value)
+    }, [])
 
+    const handleSlidingStart = useCallback(() => {
+        setIsSeeking(true)
+    }, [])
+
+    const handleSlidingComplete = useCallback(
+        async (value: number) => {
+            setIsSeeking(false)
             try {
-                await TrackPlayer.reset()
-                await TrackPlayer.add({
-                    ...selectedTrack,
-                    url: `file://${selectedTrack.path}`,
-                    duration: Number(selectedTrack.duration) / 1000,
-                })
-
-                if (!isMounted) {
-                    return
-                }
-
-                dispatch(setCurrentTrack({ ...selectedTrack }))
-                await getPlayerState()
+                await TrackPlayer.seekTo(value)
+                dispatch(setQueuePosition(value))
             } catch (error) {
-                console.warn('Failed to prepare track', error)
+                console.warn('Unable to seek', error)
             }
-        }
-
-        prepareQueue()
-
-        return () => {
-            isMounted = false
-        }
-    }, [currentTrack?.id, dispatch, getPlayerState, selectedTrack])
+        },
+        [dispatch],
+    )
 
     useEffect(() => {
         return () => {
@@ -118,15 +155,21 @@ const Player = ({ navigation, route }: PlayerProps) => {
         }
     }, [currentPlayerState])
 
+    const shuffleActive = playbackMeta.isShuffle
+    const repeatMode = playbackMeta.repeatMode
+    const repeatIcon = repeatMode === 'track' ? 'repeat-1' : 'repeat'
+    const repeatActive = repeatMode !== 'off'
+
+    const leftMeta = currentQueueItem?.artist ?? 'Unknown artist'
+    const playingTitle = currentQueueItem?.title ?? 'Nothing playing'
+
     return (
         <Container>
             <StatusBar hidden />
 
             <HeaderSection>
                 <TouchableOpacity onPress={() => { navigation.goBack() }}>
-
-                <McImage source={ Images.chevronWhite } />
-
+                    <McImage source={ Images.chevronWhite } />
                 </TouchableOpacity>
 
                 <McImage source={ Images.more } />
@@ -134,21 +177,27 @@ const Player = ({ navigation, route }: PlayerProps) => {
 
             <MusicDetailSection>
                 <View style={{ marginHorizontal: 81, marginVertical: 60, borderRadius: 214 }}>
-                    <CoverImage
-                    //@ts-ignore
-                        source={ selectedTrack?.path }
-                        placeHolder={ 'https://cdn2.iconfinder.com/data/icons/Qetto___icons_by_ampeross-d4njobq/256/library-music.png' }
-                        width={ 214 }
-                        height={ 214 }
-                    />
+                    { currentQueueItem ? (
+                        <CoverImage
+                            // @ts-ignore - library expects file path string
+                            source={ currentQueueItem.path }
+                            placeHolder={ Images.DefaultMusicIcon }
+                            width={ 214 }
+                            height={ 214 }
+                        />
+                    ) : (
+                        <PlaceholderArtwork>
+                            <Icon name='music' size={ 72 } color={ Colors.grey4 } />
+                        </PlaceholderArtwork>
+                    ) }
                 </View>
-                
+
                 <View style={{ marginTop: 16, justifyContent: 'center', alignItems: 'center' }}>
                     <McText semi size={ 24 } color={ Colors.grey5 } align='center'>
-                        { selectedTrack?.title }
+                        { playingTitle }
                     </McText>
-                    <McText medium size={14} color={Colors.grey3} style={{marginTop: 8}} align='center'>
-                        { selectedTrack?.artist }
+                    <McText medium size={ 14 } color={ Colors.grey3 } style={{ marginTop: 8 }} align='center'>
+                        { leftMeta }
                     </McText>
                 </View>
             </MusicDetailSection>
@@ -157,61 +206,82 @@ const Player = ({ navigation, route }: PlayerProps) => {
                 <Slider
                     minimumTrackTintColor={ Colors.primary }
                     maximumTrackTintColor={ Colors.grey3 }
-                    maximumValue={ progress.duration }
+                    maximumValue={ sliderMax }
                     thumbTintColor={ Colors.primary }
-                    value={ progress.position }
+                    value={ sliderValue }
                     minimumValue={ 0 }
-                >
-
-                </Slider>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                    <McText size={ 12 } color={ Colors.grey4 }>{ formatDuration(Math.floor(progress.position * 1000)) }</McText>
-                    <McText size={ 12 } color={ Colors.grey4 }>{ formatDuration(selectedTrack?.duration ?? 0) }</McText>
-                </View>
+                    onValueChange={ handleSliderValueChange }
+                    onSlidingStart={ handleSlidingStart }
+                    onSlidingComplete={ handleSlidingComplete }
+                    disabled={ !currentQueueItem }
+                />
+                
             </SliderSection>
 
+            <TimeSection>
+                <McText size={ 12 } medium color={ Colors.grey4 }>
+                    { formatDuration(Math.floor(sliderValue * 1000)) }
+                </McText>
+                <McText size={ 12 } medium color={ Colors.grey4 }>
+                    { formatDuration(totalDurationMs) }
+                </McText>
+            </TimeSection>
+
             <ControlSection>
-                <McImage source={ Images.repeat }/>
+                <IconButton onPress={ handleToggleShuffle } disabled={ !currentQueueItem }>
+                    <Icon name='shuffle' size={ 16 } color={ shuffleActive ? Colors.primary : Colors.grey4 } />
+                </IconButton>
 
                 <View style={{ width: 231, height: 70, justifyContent: 'center', alignItems: 'center' }}>
+                    <View
+                        style={{
+                            width: 231,
+                            height: 54,
+                            borderRadius: 54,
+                            flexDirection: 'row',
+                            backgroundColor: Colors.secondary,
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            opacity: currentQueueItem ? 1 : 0.5,
+                        }}
+                    >
+                        <TouchableOpacity onPress={ handleSkipPrevious } disabled={ !currentQueueItem } style={{ marginLeft: 24 }}>
+                            <McImage source={ Images.back } />
+                        </TouchableOpacity>
 
-                    <View style={{
-                        width: 231,
-                        height: 54,
-                        borderRadius: 54,
-                        flexDirection: 'row',
-                        backgroundColor: Colors.secondary,
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                    }}>
-                        <McImage source={ Images.back } style={{ marginLeft: 24 }}/>
-
-                        <View 
+                        <View
                             style={{
                                 width: 88,
                                 height: 88,
                                 borderRadius: 88,
                                 backgroundColor: Colors.background,
                                 justifyContent: 'center',
-                                alignItems: 'center'
+                                alignItems: 'center',
                             }}
                         >
-                            <PlayButton size={ 70 } circle={ 62.82 } icon={ isPlaying ? Images.pause : Images.play } onPress={ isPlaying ? pauseTrack : playTrack }/>
+                            <PlayButton
+                                size={ 70 }
+                                circle={ 62.82 }
+                                icon={ isPlaying ? Images.pause : Images.play }
+                                onPress={ currentQueueItem ? (isPlaying ? handlePause : handlePlay) : undefined }
+                            />
                         </View>
 
-                        <McImage source={ Images.next } style={{ marginRight: 24 }}/>
+                        <TouchableOpacity onPress={ handleSkipNext } disabled={ !currentQueueItem } style={{ marginRight: 24 }}>
+                            <McImage source={ Images.next } />
+                        </TouchableOpacity>
                     </View>
-
                 </View>
 
-                <McImage source={ Images.sound }/>
+                <IconButton onPress={ handleCycleRepeat } disabled={ !currentQueueItem }>
+                    <Icon name={ repeatIcon } size={ 16 } color={ repeatActive ? Colors.primary : Colors.grey4 } />
+                </IconButton>
             </ControlSection>
 
             <LyricsSection>
                 <McImage source={ Images.chevronBlueUp } />
                 <McText size={ 14 } medium color={ Colors.accent }>Lyrics</McText>
             </LyricsSection>
-
         </Container>
     )
 }
@@ -234,6 +304,14 @@ const MusicDetailSection = styled.View`
     align-items: center;
 `
 
+const TimeSection = styled.View`
+    margin: 4px 36px;
+    padding-right: 4px;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+`
+
 const ControlSection = styled.View`
     margin: 32px 24px;
     flex-direction: row;
@@ -249,6 +327,19 @@ const LyricsSection = styled.View`
     margin: 14px 0px;
     align-items: center;
     justify-content: center;
+`
+
+const IconButton = styled(TouchableOpacity)`
+    padding: 12px;
+`
+
+const PlaceholderArtwork = styled.View`
+    width: 214px;
+    height: 214px;
+    border-radius: 214px;
+    background-color: rgba(255, 255, 255, 0.08);
+    justify-content: center;
+    align-items: center;
 `
 
 export default Player

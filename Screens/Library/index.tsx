@@ -32,10 +32,12 @@ import { RootState } from '../../Store/store'
 import DiscoverCard from '../../Components/DiscoverCard'
 import { setCurrentPlayerState } from '../../Store/Actions/playerState.actions'
 import TrackCarousel from '../../Components/TrackCarousel'
+import { playTracksNow } from '../../state/playerQueue'
+import { trackToQueueItem } from '../../state/playerQueue/utils'
+import { colors } from '../../theme/tokens'
 // import { Easing } from 'react-native-reanimated'
  
 interface DrawerToggleButtonProps {
-
     progress: Animated.Value
     isOpen: boolean
     onPress: () => void
@@ -44,69 +46,37 @@ interface DrawerToggleButtonProps {
 
 
 const DrawerToggleButton: React.FC<DrawerToggleButtonProps> = ({ progress, isOpen, onPress }) => {
-
     const topLineStyle = {
-
         transform: [
-
             { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [-6, 0] }) },
-
             { rotate: progress.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '45deg'] }) },
-
         ],
-
     }
-
-
 
     const middleLineStyle = {
-
         opacity: progress.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 0, 0] }),
-
     }
-
-
 
     const bottomLineStyle = {
-
         transform: [
-
             { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [6, 0] }) },
-
             { rotate: progress.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-45deg'] }) },
-
         ],
-
     }
 
-
-
     return (
-
         <Pressable
-
             accessibilityRole='button'
-
             accessibilityLabel={ isOpen ? 'Close menu' : 'Open menu' }
-
             onPress={ onPress }
-
             hitSlop={ 12 }
-
             style={ toggleStyles.wrapper }
-
         >
-
             <Animated.View style={[toggleStyles.line, topLineStyle]} />
-
             <Animated.View style={[toggleStyles.line, middleLineStyle]} />
-
             <Animated.View style={[toggleStyles.line, bottomLineStyle]} />
-
         </Pressable>
-
     )
-
 }
 
 
@@ -187,8 +157,15 @@ const Library = ({ navigation }: LibraryProps) => {
     })
 
     const navToPlayer = useCallback((selectedTrack: ITrack) => {
-        navigation.navigate('Player', { selectedMusic: selectedTrack })
-    }, [])
+        const queueItem = trackToQueueItem(selectedTrack)
+        if (!queueItem) {
+            Alert.alert('Unable to play', 'Track data is missing a valid file path.')
+            return
+        }
+        dispatch(playTracksNow([queueItem]))
+        navigation.navigate('Player')
+    }, [dispatch, navigation])
+
 
 
     const _renderItem = useCallback(({item, index}: { item: IDummyPlaylist , index: number }) => {
@@ -362,7 +339,7 @@ const Library = ({ navigation }: LibraryProps) => {
                 <BottomSection>
                     <BottomBar>
                         <Animated.View style={{height: '100%', width: animatedWidth, backgroundColor: Colors.background, position: 'absolute', opacity: 0.3}}/>
-                        <Pressable style={ styles.playerContainer } onPress={() => navigation.navigate('Player', { selectedMusic: currentTrack })}>
+                        <Pressable style={ styles.playerContainer } onPress={() => navigation.navigate('Player')}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', flex: 1 }}>
                             <CoverImage
                                 //@ts-ignore
@@ -399,7 +376,7 @@ const toggleStyles = StyleSheet.create({
         width: 24,
         height: 2,
         borderRadius: 1,
-        backgroundColor: Colors.grey5,
+        backgroundColor: colors.neonMagenta,
     },
 })
 
@@ -408,7 +385,6 @@ const HeaderRow = styled.View`
     align-items: center;
     justify-content: space-between;
     margin: 12px ${Metrics.padding}px 0;
-    padding-right: ${Metrics.padding}px;
 `;
 
 const Container = styled.SafeAreaView`

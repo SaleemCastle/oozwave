@@ -131,10 +131,6 @@ const Onboarding = ({ navigation }: OnboardingProps) => {
     }, [dispatch, finishScan])
 
     const handleScanSuccess = useCallback((tracks: ResponseShape<DeviceTrack>) => {
-        const totalResults = tracks.results.length
-        console.log('Music scan results (raw):', tracks.length, totalResults)
-        console.log('Sample track paths:', tracks.results.slice(0, 5).map((track) => track.path))
-
         const filteredTracks = tracks.results.filter((track) => {
             const title = (track.title ?? '').trim().toUpperCase()
             const album = (track.album ?? '').trim().toLowerCase()
@@ -166,8 +162,7 @@ const Onboarding = ({ navigation }: OnboardingProps) => {
 
             return !(matchesWhatsAppPath || (matchesWhatsAppAlbum && matchesWhatsAppTitle))
         })
-
-        console.log('Tracks returned by scan:', filteredTracks.length)
+        
         dispatch(addTracks(filteredTracks))
 
         if (filteredTracks.length === 0) {

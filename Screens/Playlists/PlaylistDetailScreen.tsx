@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
     Alert,
     Modal,
@@ -14,7 +14,7 @@ import Icon from 'react-native-vector-icons/Feather'
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native'
 import LinearGradient from 'react-native-linear-gradient'
 
-import { ConfirmDialog, NeonButton, NeonCard } from '../../Components'
+import { ConfirmDialog, McImage, McText, NeonButton, NeonCard } from '../../Components'
 import tokens from '../../theme/tokens'
 import {
     playlistActions,
@@ -25,9 +25,16 @@ import {
     TrackRef,
 } from '../../state/playlists'
 import { formatRelativeUpdatedAt, generateId } from '../../state/playlists/utils'
+import {
+    startPlaylistPlayback,
+    enqueuePlayNext,
+    enqueueToQueue,
+} from '../../state/playerQueue'
 import { useAppDispatch, useAppSelector } from '../../hooks/reduxHooks'
 import { PlaylistsStackParamList } from '../../types'
 import { ITrack } from '../../Store/Actions/currentTrack.actions'
+import { Colors, Images } from '../../Constants'
+import { CoverImage } from 'react-native-get-music-files-v3dev-test'
 
 const { colors, shadows } = tokens
 
@@ -133,6 +140,45 @@ const PlaylistDetailScreen: React.FC = () => {
         setAddTracksVisible(false)
     }, [dispatch, playlistId, selectedAddIds])
 
+    const handlePlayPlaylist = useCallback(() => {
+        if (!tracks.length) {
+            Alert.alert('Playlist empty', 'Add some tracks before playing.')
+            return
+        }
+        dispatch(startPlaylistPlayback({ playlistId }))
+        navigation.navigate('Player')
+    }, [dispatch, navigation, playlistId, tracks.length])
+
+    const handleTrackPress = useCallback(
+        (track: TrackRef) => {
+            closeSwipe(track.id)
+            Alert.alert(
+                track.title,
+                'Choose what to do with this track.',
+                [
+                    {
+                        text: 'Play from here',
+                        onPress: () => {
+                            dispatch(startPlaylistPlayback({ playlistId, startTrackId: track.id }))
+                            navigation.navigate('Player')
+                        },
+                    },
+                    {
+                        text: 'Play next',
+                        onPress: () => dispatch(enqueuePlayNext({ trackId: track.id })),
+                    },
+                    {
+                        text: 'Add to queue',
+                        onPress: () => dispatch(enqueueToQueue({ trackId: track.id })),
+                    },
+                    { text: 'Cancel', style: 'cancel' },
+                ],
+                { cancelable: true },
+            )
+        },
+        [closeSwipe, dispatch, navigation, playlistId],
+    )
+
     const toggleSelectTrack = useCallback((trackId: string) => {
         setSelectedAddIds((prev) => {
             const next = new Set(prev)
@@ -172,6 +218,7 @@ const PlaylistDetailScreen: React.FC = () => {
                 )}
             >
                 <Pressable
+                    onPress={ () => handleTrackPress(item) }
                     onLongPress={ drag }
                     disabled={ isActive }
                     style={[styles.trackRow, isActive ? styles.trackRowActive : null]}
@@ -191,7 +238,7 @@ const PlaylistDetailScreen: React.FC = () => {
                 </Pressable>
             </Swipeable>
         ),
-        [closeSwipe, handleOpenMoveModal, handleRemoveTrack],
+        [closeSwipe, handleOpenMoveModal, handleRemoveTrack, handleTrackPress],
     )
 
     if (!playlist) {
@@ -229,7 +276,7 @@ const PlaylistDetailScreen: React.FC = () => {
                                         { playlist.name }
                                     </Text>
                                     <Text style={ styles.metaSubtitle }>
-                                        { trackCountLabel } � { updatedLabel }
+                                    { trackCountLabel } - { updatedLabel }
                                     </Text>
                                     { playlist.description ? (
                                         <Text style={ styles.metaDescription } numberOfLines={ 2 }>
@@ -245,6 +292,13 @@ const PlaylistDetailScreen: React.FC = () => {
                             </View>
                         </NeonCard>
                         <View style={ styles.actionsRow }>
+                            <NeonButton
+                                title='Play'
+                                onPress={ handlePlayPlaylist }
+                                style={ styles.actionButton }
+                                fullWidth
+                                disabled={ !tracks.length }
+                            />
                             <NeonButton
                                 title='Edit'
                                 variant='secondary'
@@ -388,10 +442,10 @@ const AddTracksModal: React.FC<AddTracksModalProps> = ({ visible, tracks, select
         return null
     }
     return (
-        <Modal transparent visible animationType='fade' onRequestClose={ onClose }>
+        <Modal transparent visible animationType='slide' onRequestClose={ onClose }>
             <View style={ styles.modalOverlay }>
                 <View style={ styles.addModalCard }>
-                    <Text style={ styles.modalTitle }>Select tracks</Text>
+                    <McText semi style={ styles.modalTitle }>Select tracks</McText>
                     <ScrollView style={ styles.modalList }>
                         { tracks.map((track) => {
                             const id = String(track.id)
@@ -402,12 +456,24 @@ const AddTracksModal: React.FC<AddTracksModalProps> = ({ visible, tracks, select
                                     style={[styles.addTrackRow, selected ? styles.addTrackRowSelected : null]}
                                     onPress={ () => onToggle(id) }
                                 >
-                                    <Text style={ styles.addTrackTitle } numberOfLines={ 1 }>
-                                        { track.title }
-                                    </Text>
-                                    <Text style={ styles.addTrackMeta } numberOfLines={ 1 }>
-                                        { track.artist ?? 'Unknown artist' }
-                                    </Text>
+                                    <View style={{flexDirection: 'row', columnGap: 12}}>
+                                        <CoverImage
+                                            // @ts-ignore - library expects file path string
+                                            source={ track.path }
+                                            placeHolder={ Images.DefaultMusicIcon }
+                                            width={ 40 }
+                                            height={ 40 }
+                                            style={styles.coverImage}
+                                        />
+                                        <View>
+                                            <McText medium  style={ styles.addTrackTitle } numberOfLines={ 1 }>
+                                                { track.title }
+                                            </McText>
+                                            <McText style={ styles.addTrackMeta } numberOfLines={ 1 }>
+                                                { track.artist ?? 'Unknown artist' }
+                                            </McText>
+                                        </View>
+                                    </View>
                                     { selected ? (
                                         <Icon name='check' size={ 18 } color={ colors.neonMagenta } />
                                     ) : null }
@@ -440,7 +506,7 @@ const formatDuration = (seconds: number) => {
 const styles = StyleSheet.create({
     screen: {
         flex: 1,
-        backgroundColor: colors.background,
+        backgroundColor: Colors.background,
     },
     headerContainer: {
         paddingHorizontal: 24,
@@ -593,9 +659,8 @@ const styles = StyleSheet.create({
         padding: 24,
     },
     modalTitle: {
-        fontSize: 20,
-        fontWeight: '700',
-        color: colors.grey5,
+        color: colors.pureWhite,
+        marginBottom: 6
     },
     modalSubtitle: {
         marginTop: 8,
@@ -603,7 +668,7 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     modalList: {
-        maxHeight: 260,
+        maxHeight: 460,
         marginBottom: 24,
     },
     modalListItem: {
@@ -622,27 +687,36 @@ const styles = StyleSheet.create({
     },
     addModalCard: {
         width: '100%',
+        height: '100%',
         backgroundColor: 'rgba(18,0,32,0.95)',
         borderRadius: 24,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.18)',
         padding: 24,
     },
+    coverImage: {
+        borderRadius: 6
+    },
     addTrackRow: {
-        paddingVertical: 12,
+        paddingVertical: 6,
         borderBottomWidth: StyleSheet.hairlineWidth,
         borderColor: 'rgba(255,255,255,0.1)',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 4
+        
     },
     addTrackRowSelected: {
         backgroundColor: 'rgba(255,0,200,0.12)',
+        borderRadius: 4
     },
     addTrackTitle: {
-        color: colors.grey5,
+        color: colors.lavenderFog,
         fontSize: 16,
-        fontWeight: '600',
     },
     addTrackMeta: {
-        color: 'rgba(255,255,255,0.6)',
+        color: colors.glowMagenta,
         fontSize: 13,
         marginVertical: 4,
     },
@@ -653,5 +727,3 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
 })
-
-

@@ -1,5 +1,4 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
-import { ITrack } from '../Store/Actions/currentTrack.actions'
 import { ImageSourcePropType } from 'react-native'
 
 export type PlaylistsStackParamList = {
@@ -11,7 +10,7 @@ export type PlaylistsStackParamList = {
 export type RootStackParamList = {
     Onboarding: undefined
     Library: undefined
-    Player: { selectedMusic: ITrack }
+    Player: undefined
     Billboards: { info: IBillboardProps }
     Playlists: undefined
     PlaylistDetail: { playlistId: string }

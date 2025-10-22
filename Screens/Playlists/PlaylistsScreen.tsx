@@ -168,33 +168,36 @@ const PlaylistsScreen: React.FC = () => {
                     style={ isSelected ? styles.selectedCard : undefined }
                 >
                     <View style={ styles.cardRow }>
-                        <View style={[styles.avatar, { borderColor: accentColor }] }>
-                            { item.emoji ? (
-                                <Text style={ styles.avatarEmoji }>{ item.emoji }</Text>
-                            ) : (
-                                <LinearGradient
-                                    colors={[accentColor, 'rgba(255,255,255,0.2)']}
-                                    style={ styles.avatarGradient }
-                                />
-                            ) }
+                        <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
+                            <View style={[styles.avatar, { borderColor: accentColor }] }>
+                                { item.emoji ? (
+                                    <Text style={ styles.avatarEmoji }>{ item.emoji }</Text>
+                                ) : (
+                                    <LinearGradient
+                                        colors={[accentColor, 'rgba(255,255,255,0.2)']}
+                                        style={ styles.avatarGradient }
+                                    />
+                                ) }
+                            </View>
+
+                             <Pressable
+                                accessibilityRole='button'
+                                accessibilityLabel='Open playlist options'
+                                hitSlop={ 12 }
+                                onPress={ () => setOptionsTarget(item) }
+                                style={ styles.cardMenuButton }
+                            >
+                                <Icon name='more-vertical' size={ 20 } color='rgba(255,255,255,0.7)' />
+                            </Pressable>
                         </View>
                         <View style={ styles.cardInfo }>
-                            <Text style={ styles.cardTitle } numberOfLines={ 1 }>
+                            <McText semi style={ styles.cardTitle } numberOfLines={ 1 }>
                                 { item.name }
-                            </Text>
-                            <Text style={ styles.cardMeta } numberOfLines={ 1 }>
-                                { trackCount === 1 ? '1 track' : `${trackCount} tracks` } ï¿½ { updatedLabel }
-                            </Text>
+                            </McText>
+                            <McText medium style={ styles.cardMeta } numberOfLines={ 1 }>
+                                { trackCount === 1 ? '1 track' : `${trackCount} tracks` } { updatedLabel }
+                            </McText>
                         </View>
-                        <Pressable
-                            accessibilityRole='button'
-                            accessibilityLabel='Open playlist options'
-                            hitSlop={ 12 }
-                            onPress={ () => setOptionsTarget(item) }
-                            style={ styles.cardMenuButton }
-                        >
-                            <Icon name='more-vertical' size={ 20 } color='rgba(255,255,255,0.7)' />
-                        </Pressable>
                     </View>
                 </NeonCard>
             )
@@ -549,15 +552,15 @@ const styles = StyleSheet.create({
     },
     list: {
         paddingHorizontal: 24,
-        paddingBottom: 120,
     },
     cardRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
+        // flexDirection: 'row',
+        width: 150,
+        height: 150,
     },
     avatar: {
-        width: 54,
-        height: 54,
+        width: 48,
+        height: 48,
         borderRadius: 27,
         borderWidth: 2,
         alignItems: 'center',
@@ -565,7 +568,7 @@ const styles = StyleSheet.create({
         marginRight: 16,
     },
     avatarEmoji: {
-        fontSize: 26,
+        fontSize: 20,
     },
     avatarGradient: {
         width: '100%',
@@ -576,10 +579,9 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     cardTitle: {
-        color: colors.grey5,
+        color: colors.pureWhite,
         fontSize: 18,
-        fontWeight: '700',
-        marginBottom: 4,
+        marginVertical: 4,
     },
     cardMeta: {
         color: 'rgba(255,255,255,0.65)',

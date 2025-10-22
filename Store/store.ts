@@ -9,6 +9,11 @@ import {
     playlistListenerMiddleware,
     loadPlaylistsFromStorage,
 } from '../state/playlists'
+import {
+    playerQueueReducer,
+    loadQueueFromStorage,
+} from '../state/playerQueue'
+import { playerQueueListenerMiddleware } from '../state/playerQueue/listener'
 
 export const store = configureStore({
     reducer: {
@@ -17,12 +22,17 @@ export const store = configureStore({
         currentPlayerState: currentPlayerStateReducer,
         permission: setPermissionsReducer,
         playlists: playlistReducer,
+        playerQueue: playerQueueReducer,
     },
     middleware: (getDefaultMiddleware) =>
-        getDefaultMiddleware().prepend(playlistListenerMiddleware.middleware),
+        getDefaultMiddleware().prepend(
+            playerQueueListenerMiddleware.middleware,
+            playlistListenerMiddleware.middleware,
+        ),
 })
 
 store.dispatch(loadPlaylistsFromStorage())
+store.dispatch(loadQueueFromStorage())
 
 export type RootState = ReturnType<typeof store.getState>
 export type AppDispatch = typeof store.dispatch
