@@ -23,7 +23,13 @@ const NeonCard: React.FC<NeonCardProps> = ({
     disabled = false,
     accessibilityLabel,
 }) => {
-    const containerStyle = [styles.container, style]
+    const resolvedStyle = Array.isArray(style)
+        ? style
+        : style !== undefined && style !== null
+            ? [style]
+            : []
+    const baseStyle = [styles.container, { borderColor: accentColor }, ...resolvedStyle]
+
     if (onPress) {
         return (
             <Pressable
@@ -31,11 +37,15 @@ const NeonCard: React.FC<NeonCardProps> = ({
                 accessibilityLabel={ accessibilityLabel }
                 disabled={ disabled }
                 onPress={ onPress }
-                style={({ pressed }) => [containerStyle, pressed ? styles.pressed : null, disabled ? styles.disabled : null]}
+                style={({ pressed }) => [
+                    ...baseStyle,
+                    pressed ? styles.pressed : null,
+                    disabled ? styles.disabled : null,
+                ]}
             >
                 <LinearGradient
                     colors={ ['rgba(255,0,200,0.12)', 'rgba(0,245,255,0.12)'] }
-                    style={[styles.gradient, { borderColor: accentColor }]}
+                    style={ styles.gradient }
                 >
                     { children }
                 </LinearGradient>
@@ -44,10 +54,10 @@ const NeonCard: React.FC<NeonCardProps> = ({
     }
 
     return (
-        <View style={ containerStyle }>
+        <View style={ baseStyle }>
             <LinearGradient
                 colors={ ['rgba(255,0,200,0.12)', 'rgba(0,245,255,0.12)'] }
-                style={[styles.gradient, { borderColor: accentColor }]}
+                style={ styles.gradient }
             >
                 { children }
             </LinearGradient>
@@ -60,12 +70,17 @@ export default NeonCard
 const styles = StyleSheet.create({
     container: {
         marginBottom: 16,
-        height: 200,
-        width: 200,
-        // ...shadows.neonPill,
+        // borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.18)',
+        // borderRadius: 24,
+        overflow: 'hidden',
+        backgroundColor: 'rgba(10,0,22,0.65)',
+        ...shadows.neonPill,
     },
     gradient: {
-        padding: 8,
+        flex: 1,
+        padding: 16,
+        // borderRadius: 24,
     },
     pressed: {
         transform: [{ scale: 0.98 }],

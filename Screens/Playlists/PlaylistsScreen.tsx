@@ -160,27 +160,30 @@ const PlaylistsScreen: React.FC = () => {
             const updatedLabel = formatRelativeUpdatedAt(item.updatedAt)
             const accentColor = item.color ?? colors.neonMagenta
             const isSelected = selectedPlaylist?.id === item.id
+            const metaLabel = trackCount === 1 ? '1 track' : `${trackCount} tracks`
 
             return (
                 <NeonCard
                     accentColor={ accentColor }
                     onPress={ () => handleOpenPlaylist(item) }
-                    style={ isSelected ? styles.selectedCard : undefined }
+                    style={[styles.playlistCard, isSelected ? styles.selectedCard : null]}
                 >
-                    <View style={ styles.cardRow }>
-                        <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-                            <View style={[styles.avatar, { borderColor: accentColor }] }>
+                    <View style={ styles.cardContent }>
+                        <View style={ styles.cardHeader }>
+                            <View style={[styles.recordArt, { borderColor: accentColor }] }>
                                 { item.emoji ? (
-                                    <Text style={ styles.avatarEmoji }>{ item.emoji }</Text>
+                                    <Text style={ styles.recordEmoji }>{ item.emoji }</Text>
                                 ) : (
                                     <LinearGradient
                                         colors={[accentColor, 'rgba(255,255,255,0.2)']}
-                                        style={ styles.avatarGradient }
-                                    />
+                                        style={ styles.recordGradient }
+                                    >
+                                        <View style={ styles.recordLabel } />
+                                    </LinearGradient>
                                 ) }
                             </View>
 
-                             <Pressable
+                            <Pressable
                                 accessibilityRole='button'
                                 accessibilityLabel='Open playlist options'
                                 hitSlop={ 12 }
@@ -190,12 +193,13 @@ const PlaylistsScreen: React.FC = () => {
                                 <Icon name='more-vertical' size={ 20 } color='rgba(255,255,255,0.7)' />
                             </Pressable>
                         </View>
+
                         <View style={ styles.cardInfo }>
                             <McText semi style={ styles.cardTitle } numberOfLines={ 1 }>
                                 { item.name }
                             </McText>
                             <McText medium style={ styles.cardMeta } numberOfLines={ 1 }>
-                                { trackCount === 1 ? '1 track' : `${trackCount} tracks` } { updatedLabel }
+                                { `${metaLabel} - ${updatedLabel}` }
                             </McText>
                         </View>
                     </View>
@@ -335,7 +339,7 @@ const PlaylistsScreen: React.FC = () => {
             <ConfirmDialog
                 visible={ Boolean(showDeleteConfirm) }
                 title='Delete playlist?'
-                message={`"${showDeleteConfirm?.name ?? ''}" will be removed. You canï¿½t undo this.`}
+                message={`"${showDeleteConfirm?.name ?? ''}" will be removed. You can't undo this.`}
                 confirmLabel='Delete'
                 destructive
                 onConfirm={ handleDelete }
@@ -474,7 +478,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ visible, value, loading, erro
                     <View style={ styles.importActions }>
                         <NeonButton title='Cancel' variant='ghost' onPress={ onClose } style={ styles.importButton } fullWidth />
                         <NeonButton
-                            title={ loading ? 'Importingï¿½' : 'Import' }
+                            title={ loading ? 'Importing...' : 'Import' }
                             onPress={ onImport }
                             disabled={ loading }
                             fullWidth
@@ -552,40 +556,61 @@ const styles = StyleSheet.create({
     },
     list: {
         paddingHorizontal: 24,
+        paddingBottom: 160,
     },
-    cardRow: {
-        // flexDirection: 'row',
+    playlistCard: {
         width: 150,
         height: 150,
+        marginBottom: 24,
     },
-    avatar: {
-        width: 48,
-        height: 48,
-        borderRadius: 27,
-        borderWidth: 2,
+    cardContent: {
+        flex: 1,
+        justifyContent: 'space-between',
+    },
+    cardHeader: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        marginBottom: 12,
+    },
+    recordArt: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        borderWidth: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        marginRight: 16,
+        // backgroundColor: 'rgba(255,255,255,0.08)',
+        overflow: 'hidden',
     },
-    avatarEmoji: {
+    recordEmoji: {
         fontSize: 20,
     },
-    avatarGradient: {
+    recordGradient: {
         width: '100%',
         height: '100%',
-        borderRadius: 27,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    recordLabel: {
+        width: 18,
+        height: 18,
+        borderRadius: 9,
+        backgroundColor: 'rgba(255,255,255,0.75)',
+        opacity: 0.9,
     },
     cardInfo: {
-        flex: 1,
+        marginTop: 'auto',
     },
     cardTitle: {
         color: colors.pureWhite,
         fontSize: 18,
-        marginVertical: 4,
+        marginBottom: 6,
     },
     cardMeta: {
         color: 'rgba(255,255,255,0.65)',
-        fontSize: 14,
+        fontSize: 13,
     },
     cardMenuButton: {
         width: 40,
@@ -593,9 +618,11 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         alignItems: 'center',
         justifyContent: 'center',
+        backgroundColor: 'rgba(0,0,0,0.12)',
     },
     selectedCard: {
         borderColor: colors.neonMagenta,
+        // borderWidth: 2,
     },
     fab: {
         position: 'absolute',
@@ -709,4 +736,3 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
 })
-
