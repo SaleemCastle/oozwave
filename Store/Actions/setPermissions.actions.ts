@@ -8,9 +8,13 @@ export function setPermission(permission: string) {
     }
 }
 
-export function setPermissionError(error: string) {
+export function setPermissionError(error: unknown) {
+    const message =
+        error && typeof error === 'object' && 'message' in (error as any)
+            ? String((error as any).message)
+            : String(error)
     return {
         type: SET_PERMISSIONS_ERROR,
-        payload: error
+        payload: message,
     }
 }
