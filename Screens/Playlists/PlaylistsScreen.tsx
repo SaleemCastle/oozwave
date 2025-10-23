@@ -27,7 +27,8 @@ import {
 import { formatRelativeUpdatedAt, generateId } from '../../state/playlists/utils'
 import { useAppDispatch, useAppSelector } from '../../hooks/reduxHooks'
 import { PlaylistsStackParamList } from '../../types'
-import { Colors } from '../../Constants'
+import { Colors, Images } from '../../Constants'
+import { CoverImage } from 'react-native-get-music-files-v3dev-test'
 
 const { colors, shadows } = tokens
 
@@ -203,6 +204,37 @@ const PlaylistsScreen: React.FC = () => {
                             </McText>
                         </View>
                     </View>
+
+                    {/* Tracks */}
+                    {
+
+                        <View style={styles.recordTrack}>
+                            <LinearGradient
+                                colors={["#1a1a1a", "#000000", "#1a1a1a"]}
+                                start={{ x: 0.2, y: 0.2 }}
+                                end={{ x: 0.8, y: 0.8 }}
+                                style={styles.recordTrackOuter}
+                            >
+                                {/* Vinyl groove rings (layered borders to simulate texture) */}
+                                <View style={styles.groove1} />
+                                <View style={styles.groove2} />
+                                <View style={styles.groove3} />
+
+                                {/* Inner red label */}
+                                <View style={styles.innerLabel}>
+                                    <CoverImage
+                                        // @ts-ignore - library expects file path string
+                                        source={item.path}
+                                        placeHolder={Images.DefaultMusicIcon}
+                                        width={40}
+                                        height={40}
+                                        style={styles.coverImage}
+                                    />
+                                    <View style={styles.centerHole} />
+                                </View>
+                            </LinearGradient>
+                        </View>
+                    }
                 </NeonCard>
             )
         },
@@ -562,10 +594,13 @@ const styles = StyleSheet.create({
         width: 150,
         height: 150,
         marginBottom: 24,
+        zIndex: 98,
+        position: 'relative'
     },
     cardContent: {
         flex: 1,
         justifyContent: 'space-between',
+        zIndex:99
     },
     cardHeader: {
         flexDirection: 'row',
@@ -582,6 +617,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         // backgroundColor: 'rgba(255,255,255,0.08)',
         overflow: 'hidden',
+        zIndex: 1
     },
     recordEmoji: {
         fontSize: 20,
@@ -599,6 +635,77 @@ const styles = StyleSheet.create({
         borderRadius: 9,
         backgroundColor: 'rgba(255,255,255,0.75)',
         opacity: 0.9,
+    },
+    recordTrack: {
+        position: "absolute",
+        bottom: 0,
+        right: "-55%",
+        zIndex: -1,
+    },
+    recordTrackOuter: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        justifyContent: "center",
+        alignItems: "center",
+        borderWidth: 1,
+        borderColor: "#111",
+        elevation: 6,
+        shadowColor: "#000",
+        shadowOpacity: 0.6,
+        shadowRadius: 8,
+    },
+    groove1: {
+        position: "absolute",
+        width: 110,
+        height: 110,
+        borderRadius: 55,
+        borderWidth: 0.5,
+        borderColor: "rgba(255,255,255,0.05)",
+    },
+    groove2: {
+        position: "absolute",
+        width: 95,
+        height: 95,
+        borderRadius: 47.5,
+        borderWidth: 0.5,
+        borderColor: "rgba(255,255,255,0.05)",
+    },
+    groove3: {
+        position: "absolute",
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        borderWidth: 0.5,
+        borderColor: "rgba(255,255,255,0.05)",
+    },
+
+    innerLabel: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: "transparent",
+        borderWidth: 3,
+        borderColor: colors.pureWhite,
+        justifyContent: "center",
+        alignItems: "center",
+        overflow: 'hidden'
+    },
+
+    coverImage: {
+        width: "100%",
+        height: "100%",
+        resizeMode: "cover",
+    },
+
+    // Center hole
+    centerHole: {
+        position: "absolute",
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: "#000",
+        zIndex: 2,
     },
     cardInfo: {
         marginTop: 'auto',

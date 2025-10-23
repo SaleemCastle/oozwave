@@ -3,6 +3,7 @@ import { Pressable, StyleProp, StyleSheet, View, ViewStyle } from 'react-native'
 import LinearGradient from 'react-native-linear-gradient'
 
 import tokens from '../../theme/tokens'
+import { Colors } from '../../Constants'
 
 const { colors, shadows } = tokens
 
@@ -44,7 +45,7 @@ const NeonCard: React.FC<NeonCardProps> = ({
                 ]}
             >
                 <LinearGradient
-                    colors={ ['rgba(255,0,200,0.12)', 'rgba(0,245,255,0.12)'] }
+                    colors={ [Colors.purple900, Colors.blue900] }
                     style={ styles.gradient }
                 >
                     { children }
@@ -56,7 +57,7 @@ const NeonCard: React.FC<NeonCardProps> = ({
     return (
         <View style={ baseStyle }>
             <LinearGradient
-                colors={ ['rgba(255,0,200,0.12)', 'rgba(0,245,255,0.12)'] }
+                colors={ ['rgba(255,0,200,1)', 'rgba(0,245,255,1)'] }
                 style={ styles.gradient }
             >
                 { children }
@@ -73,13 +74,15 @@ const styles = StyleSheet.create({
         // borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.18)',
         // borderRadius: 24,
-        overflow: 'hidden',
+        // overflow: 'hidden',
         backgroundColor: 'rgba(10,0,22,0.65)',
         ...shadows.neonPill,
+        zIndex: 99,
     },
     gradient: {
         flex: 1,
         padding: 16,
+        zIndex: 99
         // borderRadius: 24,
     },
     pressed: {
