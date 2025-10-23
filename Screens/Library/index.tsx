@@ -230,11 +230,27 @@ const Library: React.FC<LibraryProps> = ({ navigation }) => {
   }, [dispatch, navigation])
 
   const playMultiple = useCallback((list: ITrack[]) => {
-    const items = list.map(trackToQueueItem).filter(Boolean) as any[]
-    if (!items.length) {
+    // Convert to queue items, drop heavy artwork to reduce memory usage for large queues
+    const all = list
+      .map(trackToQueueItem)
+      .filter(Boolean)
+      .map((item) => ({ ...(item as any), artwork: undefined })) as any[]
+
+    if (!all.length) {
       Alert.alert('Nothing to play', 'No playable tracks found.')
       return
     }
+
+    // Guard against extremely large queues causing native crashes
+    const MAX_BULK_ADD = 1000
+    const items = all.slice(0, MAX_BULK_ADD)
+    if (all.length > MAX_BULK_ADD) {
+      Alert.alert(
+        'Playing first 1000 tracks',
+        `Limited to ${MAX_BULK_ADD} tracks to keep things stable.`,
+      )
+    }
+
     dispatch(playTracksNow(items))
     navigation.navigate('Player')
   }, [dispatch, navigation])
@@ -492,9 +508,11 @@ const Library: React.FC<LibraryProps> = ({ navigation }) => {
           renderItem={({ item }) => (
             <SongRow onPress={() => handlePlayTrack(item)} onLongPress={() => setConfirm({ visible: true, title: 'Offline', message: 'Make song available offline?', onConfirm: () => toggleOffline('tracks', String(item.id)) })}>
               <CoverImage //@ts-ignore
-                src={ item.path }
+                src={item.path}
+                placeHolder={ Images.DefaultMusicIcon }
                 width={48}
                 height={48}
+                style={{borderRadius: 2}}
               />
               <View style={{ marginLeft: 12, flex: 1 }}>
                 <McText bold size={13} color={Colors.grey5} numberOfLines={1}>{item.title || 'Unknown'}</McText>

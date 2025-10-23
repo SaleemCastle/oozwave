@@ -47,7 +47,7 @@ const NeonButton: React.FC<NeonButtonProps> = ({
         const buttonSize = size ?? 48
         const renderedIcon = icon && React.isValidElement(icon) ? React.cloneElement(icon as any, { color: (icon as any).props?.color ?? colors.pureWhite, size: (icon as any).props?.size ?? 20 }) : icon
         const content = (
-            <View style={[styles.content, fullWidth && !isCircular && styles.fullWidth, isCircular && { width: buttonSize, height: buttonSize, paddingHorizontal: 0, borderRadius: buttonSize / 2 }, state.pressed && styles.pressedContent]}>
+            <View style={[styles.content, fullWidth && !isCircular && styles.fullWidth, !isCircular && { paddingVertical: 12}, isCircular && { width: buttonSize, height: buttonSize, paddingHorizontal: 0, borderRadius: buttonSize / 2 }, state.pressed && styles.pressedContent]}>
                 { icon ? <View style={[styles.iconContainer, isIconOnly && { marginRight: 0 }]}>{ icon }</View> : null }
                 
                 {
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
         borderRadius: 999,
     },
     content: {
-                paddingHorizontal: 24,
+        paddingHorizontal: 24,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
