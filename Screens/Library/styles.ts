@@ -1,12 +1,9 @@
-import React from "react";
-import { StyleSheet } from "react-native";
+import { StyleSheet } from 'react-native'
+import { Colors } from '../../Constants'
 
 export const styles = StyleSheet.create({
-  playerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12
-  }
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
 })

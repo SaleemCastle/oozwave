@@ -4,11 +4,11 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 
 import TabBar from '../Components/TabBar'
 import { Colors } from '../Constants'
-import { Library, Billboards } from '../Screens'
+import { Home, Library, Billboards } from '../Screens'
 
 export type AppTabParamList = {
     Home: undefined
-    Search: undefined
+    Library: undefined
     Favorites: undefined
     Profile: undefined
 }
@@ -51,16 +51,16 @@ const AppTabs: React.FC = () => {
         >
             <Tab.Screen
                 name="Home"
-                component={ Library }
+                component={ Home }
                 options={{
                     tabBarLabel: 'Home',
                 }}
             />
             <Tab.Screen
-                name="Search"
-                component={ Billboards }
+                name="Library"
+                component={ Library }
                 options={{
-                    tabBarLabel: 'Search',
+                    tabBarLabel: 'Library',
                 }}
             />
             <Tab.Screen
