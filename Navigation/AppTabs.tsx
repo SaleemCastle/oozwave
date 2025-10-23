@@ -8,7 +8,7 @@ import { Home, Library, Billboards } from '../Screens'
 
 export type AppTabParamList = {
     Home: undefined
-    Library: undefined
+    LibraryTab: undefined
     Favorites: undefined
     Profile: undefined
 }
@@ -57,7 +57,7 @@ const AppTabs: React.FC = () => {
                 }}
             />
             <Tab.Screen
-                name="Library"
+                name="LibraryTab"
                 component={ Library }
                 options={{
                     tabBarLabel: 'Library',

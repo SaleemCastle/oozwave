@@ -26,6 +26,7 @@ interface CustomTabBarProps extends BottomTabBarProps {
 const ICONS: Record<string, string> = {
     Home: 'home',
     Library: 'folder-music',
+    LibraryTab: 'folder-music',
     Favorites: 'heart',
     Profile: 'account',
 }

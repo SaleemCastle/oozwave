@@ -16,7 +16,7 @@ import styled from 'styled-components/native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { CoverImage } from 'react-native-get-music-files-v3dev-test'
 
-import { Colors } from '../../Constants'
+import { Colors, Images } from '../../Constants'
 import { McText, McImage, McVectorIcon, ConfirmDialog, NeonButton } from '../../Components'
 import { useAppDispatch, useAppSelector } from '../../hooks/reduxHooks'
 import { LibraryProps } from '../../types'
@@ -461,12 +461,14 @@ const Library: React.FC<LibraryProps> = ({ navigation }) => {
                         <SongRow onPress={() => handlePlayTrack(item)} onLongPress={() => setConfirm({ visible: true, title: 'Offline', message: 'Make song available offline?', onConfirm: () => toggleOffline('tracks', String(item.id)) })}>
                             <CoverImage //@ts-ignore
                                 src={item.path}
+                                placeHolder={ Images.DefaultMusicIcon }
                                 width={48}
                                 height={48}
+                                style={{borderRadius:4}}
                             />
                             <View style={{ marginLeft: 12, flex: 1 }}>
                                 <McText bold size={13} color={Colors.grey5} numberOfLines={1}>{item.title || 'Unknown'}</McText>
-                                <McText size={11} color={Colors.grey3} numberOfLines={1} style={{ marginTop: 2 }}>{item.artist || 'Unknown'} � {item.album || 'Unknown'}</McText>
+                                <McText size={11} color={Colors.grey3} numberOfLines={1} style={{ marginTop: 2 }}>{item.artist || 'Unknown'} {' \u2022 '} {item.album || 'Unknown'}</McText>
                             </View>
                             <TouchableOpacity onPress={() => toggleOffline('tracks', String(item.id))}>
                                 <McVectorIcon type="Feather" name={offline.tracks[String(item.id)] ? 'download' : 'download-cloud'} color={Colors.accent} size={18} />

@@ -27,7 +27,6 @@ import AppDrawer, { DrawerOption } from '../../Components/AppDrawer'
 import { styles } from './styles';
 import { useAppDispatch, useAppSelector } from '../../hooks/reduxHooks'
 import { IDummyPlaylist } from '../../Mock/Dummy'
-import { LibraryProps } from '../../types'
 import { RootState } from '../../Store/store'
 import DiscoverCard from '../../Components/DiscoverCard'
 import { setCurrentPlayerState } from '../../Store/Actions/playerState.actions'
@@ -36,7 +35,14 @@ import { playTracksNow } from '../../state/playerQueue'
 import { trackToQueueItem } from '../../state/playerQueue/utils'
 import { colors } from '../../theme/tokens'
 // import { Easing } from 'react-native-reanimated'
- 
+
+import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs'
+import type { CompositeScreenProps } from '@react-navigation/native'
+import type { NativeStackScreenProps } from '@react-navigation/native-stack'
+import type { AppTabParamList } from '../../Navigation/AppTabs'
+import type { RootStackParamList } from '../../types'
+
+export type HomeProps = CompositeScreenProps<BottomTabScreenProps<AppTabParamList, 'Home'>, NativeStackScreenProps<RootStackParamList>> 
 interface DrawerToggleButtonProps {
     progress: Animated.Value
     isOpen: boolean
@@ -80,7 +86,7 @@ const DrawerToggleButton: React.FC<DrawerToggleButtonProps> = ({ progress, isOpe
 }
 
 
-const Library = ({ navigation }: LibraryProps) => {
+const Home = ({ navigation }: HomeProps) => {
     const tracks: ITrack[] = useAppSelector((state) => state.tracks)
     const playerState = useAppSelector((state) => state.currentPlayerState.playerState)
     const currentTrack = useAppSelector((state) => state.currentTrack)
@@ -436,4 +442,4 @@ const BottomSection = styled.View`
     left: 0px;
     z-index: 1;
 `
-export default Library
+export default Home
