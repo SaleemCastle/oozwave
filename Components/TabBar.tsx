@@ -9,7 +9,7 @@ import {
 } from 'react-native'
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs'
 import LinearGradient from 'react-native-linear-gradient'
-import Icon from 'react-native-vector-icons/Feather'
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import tokens from '../theme/tokens'
@@ -25,9 +25,9 @@ interface CustomTabBarProps extends BottomTabBarProps {
 
 const ICONS: Record<string, string> = {
     Home: 'home',
-    Search: 'search',
+    Library: 'folder-music',
     Favorites: 'heart',
-    Profile: 'user',
+    Profile: 'account',
 }
 
 const usePrefersReducedMotion = () => {
