@@ -334,7 +334,7 @@ const PlaylistsScreen: React.FC = () => {
                     hitSlop={ 12 }
                     style={ styles.sortPill }
                 >
-                    <Text style={ styles.sortText }>{ SORT_OPTIONS.find((option) => option.value === sortBy)?.label ?? 'Sort' }</Text>
+                    <McText semi style={ styles.sortText }>{ SORT_OPTIONS.find((option) => option.value === sortBy)?.label ?? 'Sort' }</McText>
                     <Icon name='chevron-down' size={ 16 } color={ colors.pureWhite } />
                 </Pressable>
             </View>
@@ -496,14 +496,15 @@ const SortSheet: React.FC<SortSheetProps> = ({ visible, current, onSelect, onClo
                                 size={ 18 }
                                 color={ option.value === current ? colors.neonMagenta : 'rgba(255,255,255,0.6)' }
                             />
-                            <Text
+                            <McText
+                                semi
                                 style={[
                                     styles.sheetLabel,
                                     option.value === current ? styles.sheetLabelActive : null,
                                 ]}
                             >
                                 { option.label }
-                            </Text>
+                            </McText>
                         </Pressable>
                     )) }
                 </View>
@@ -606,6 +607,7 @@ const styles = StyleSheet.create({
         marginHorizontal: 12,
         paddingVertical: 12,
         color: colors.grey5,
+        fontWeight: '800'
     },
     sortPill: {
         flexDirection: 'row',
@@ -619,7 +621,6 @@ const styles = StyleSheet.create({
     },
     sortText: {
         color: colors.pureWhite,
-        fontWeight: '600',
         marginRight: 6,
     },
     list: {
@@ -835,7 +836,6 @@ const styles = StyleSheet.create({
         marginLeft: 12,
         color: 'rgba(255,255,255,0.85)',
         fontSize: 16,
-        fontWeight: '600',
     },
     sheetLabelActive: {
         color: colors.neonMagenta,
