@@ -28,6 +28,7 @@ import { formatRelativeUpdatedAt, generateId } from '../../state/playlists/utils
 import { useAppDispatch, useAppSelector } from '../../hooks/reduxHooks'
 import { PlaylistsStackParamList } from '../../types'
 import { Colors, Images } from '../../Constants'
+import { ITrack } from '../../Store/Actions/currentTrack.actions'
 import { CoverImage } from 'react-native-get-music-files-v3dev-test'
 
 const { colors, shadows } = tokens
@@ -56,6 +57,21 @@ const PlaylistsScreen: React.FC = () => {
     const [importText, setImportText] = useState('')
     const [importError, setImportError] = useState<string | null>(null)
     const [importLoading, setImportLoading] = useState(false)
+    const libraryTracks = useAppSelector((state) => state.tracks as ITrack[] | undefined)
+
+    const trackById = useMemo(() => {
+        const map = new Map<string, ITrack>()
+        ;(libraryTracks ?? []).forEach((track) => {
+            if (!track || track.id == null) {
+                return
+            }
+            const key = String(track.id)
+            if (key.length > 0) {
+                map.set(key, track)
+            }
+        })
+        return map
+    }, [libraryTracks])
 
     const debounceRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -163,6 +179,19 @@ const PlaylistsScreen: React.FC = () => {
             const isSelected = selectedPlaylist?.id === item.id
             const metaLabel = trackCount === 1 ? '1 track' : `${trackCount} tracks`
 
+            let coverSource: string | undefined
+            for (const trackId of item.trackIds) {
+                if (trackId === undefined || trackId === null) {
+                    continue
+                }
+                const track = trackById.get(String(trackId))
+                const candidatePath = track?.path?.trim()
+                if (candidatePath) {
+                    coverSource = candidatePath
+                    break
+                }
+            }
+
             return (
                 <NeonCard
                     accentColor={ accentColor }
@@ -224,11 +253,18 @@ const PlaylistsScreen: React.FC = () => {
                                 <View style={styles.innerLabel}>
                                     <CoverImage
                                         // @ts-ignore - library expects file path string
-                                        source={item.path}
+                                        source={coverSource ?? ''}
                                         placeHolder={Images.DefaultMusicIcon}
                                         width={40}
                                         height={40}
                                         style={styles.coverImage}
+                                    />
+                                    {/* Glossy reflection overlay */}
+                                    <LinearGradient
+                                        colors={["rgba(255,255,255,0.25)", "rgba(255,255,255,0.05)", "transparent"]}
+                                        start={{ x: 0.1, y: 0 }}
+                                        end={{ x: 0.9, y: 1 }}
+                                        style={styles.glossOverlay}
                                     />
                                     <View style={styles.centerHole} />
                                 </View>
@@ -238,7 +274,7 @@ const PlaylistsScreen: React.FC = () => {
                 </NeonCard>
             )
         },
-        [handleOpenPlaylist, selectedPlaylist?.id],
+        [handleOpenPlaylist, selectedPlaylist?.id, trackById],
     )
 
     const emptyState = useMemo(
@@ -267,7 +303,7 @@ const PlaylistsScreen: React.FC = () => {
                         style={ styles.headerIconButton }
                         hitSlop={ 12 }
                     >
-                        <Icon name='download' size={ 18 } color={ colors.grey5 } />
+                        <Icon name='download' size={ 18 } color={ colors.neonMagenta } />
                     </Pressable>
                     <Pressable
                         accessibilityRole='button'
@@ -276,7 +312,7 @@ const PlaylistsScreen: React.FC = () => {
                         style={ styles.headerIconButton }
                         hitSlop={ 12 }
                     >
-                        <Icon name='share-2' size={ 18 } color={ colors.grey5 } />
+                        <Icon name='share-2' size={ 18 } color={ colors.neonMagenta } />
                     </Pressable>
                 </View>
             </View>
@@ -549,7 +585,7 @@ const styles = StyleSheet.create({
         height: 40,
         borderRadius: 20,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.2)',
+        borderColor: colors.neonMagenta,
         alignItems: 'center',
         justifyContent: 'center',
         marginLeft: 12,
@@ -689,13 +725,21 @@ const styles = StyleSheet.create({
         borderColor: colors.pureWhite,
         justifyContent: "center",
         alignItems: "center",
-        overflow: 'hidden'
+        overflow: 'hidden',
+        position: 'relative'
     },
 
     coverImage: {
         width: "100%",
         height: "100%",
         resizeMode: "cover",
+    },
+
+    glossOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        borderRadius: 20,
+        opacity: 0.5,
+        zIndex: 1,
     },
 
     // Center hole
