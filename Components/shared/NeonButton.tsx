@@ -10,7 +10,7 @@ const { colors, shadows } = tokens
 type NeonButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
 
 interface NeonButtonProps {
-    title: string
+    title?: string
     onPress: () => void
     icon?: ReactNode
     variant?: NeonButtonVariant
@@ -19,8 +19,9 @@ interface NeonButtonProps {
     textStyle?: StyleProp<TextStyle>
     accessibilityLabel?: string
     fullWidth?: boolean
+    circular?: boolean
+    size?: number
 }
-
 const gradientForVariant: Record<Exclude<NeonButtonVariant, 'ghost'>, [string, string]> = {
     primary: [colors.neonMagenta, colors.cyanPulse],
     secondary: ['rgba(255, 0, 200, 0.35)', 'rgba(0, 245, 255, 0.35)'],
@@ -37,22 +38,34 @@ const NeonButton: React.FC<NeonButtonProps> = ({
     textStyle,
     accessibilityLabel,
     fullWidth = false,
+    circular,
+    size
 }) => {
     const renderContent = (state: PressableStateCallbackType) => {
+        const isIconOnly = !!icon && !title
+        const isCircular = circular ?? isIconOnly
+        const buttonSize = size ?? 48
+        const renderedIcon = icon && React.isValidElement(icon) ? React.cloneElement(icon as any, { color: (icon as any).props?.color ?? colors.pureWhite, size: (icon as any).props?.size ?? 20 }) : icon
         const content = (
-            <View style={[styles.content, fullWidth && styles.fullWidth, state.pressed && styles.pressedContent]}>
-                { icon ? <View style={ styles.iconContainer }>{ icon }</View> : null }
-                <McText
-                    semi
-                    style={[
-                        styles.label,
-                        variant === 'ghost' ? styles.ghostLabel : null,
-                        disabled ? styles.disabledLabel : null,
-                        textStyle,
-                    ]}
-                >
-                    { title }
-                </McText>
+            <View style={[styles.content, fullWidth && !isCircular && styles.fullWidth, isCircular && { width: buttonSize, height: buttonSize, paddingHorizontal: 0, borderRadius: buttonSize / 2 }, state.pressed && styles.pressedContent]}>
+                { icon ? <View style={[styles.iconContainer, isIconOnly && { marginRight: 0 }]}>{ icon }</View> : null }
+                
+                {
+                    title
+                    ?
+                    <McText
+                        semi
+                        style={[
+                            styles.label,
+                            variant === 'ghost' ? styles.ghostLabel : null,
+                            disabled ? styles.disabledLabel : null,
+                            textStyle,
+                        ]}
+                    >
+                        { title }
+                    </McText>
+                    : null
+                }
             </View>
         )
 
@@ -88,6 +101,7 @@ const NeonButton: React.FC<NeonButtonProps> = ({
                 variant === 'ghost' ? styles.ghost : styles.elevated,
                 disabled ? styles.disabled : null,
                 pressed ? styles.pressed : null,
+                circular ? { width: (size ?? 48), height: (size ?? 48), borderRadius: (size ?? 48) / 2 } : null,
                 style,
             ]}
             hitSlop={ 12 }
@@ -103,8 +117,7 @@ const styles = StyleSheet.create({
     base: {
         borderRadius: 999,
         overflow: 'hidden',
-        minHeight: 48,
-    },
+            },
     elevated: {
         ...shadows.neonGlow,
     },
@@ -117,8 +130,7 @@ const styles = StyleSheet.create({
         borderRadius: 999,
     },
     content: {
-        minHeight: 48,
-        paddingHorizontal: 24,
+                paddingHorizontal: 24,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',

@@ -15,6 +15,8 @@ import {
 } from '../state/playerQueue'
 import { playerQueueListenerMiddleware } from '../state/playerQueue/listener'
 
+const isDev = typeof __DEV__ !== 'undefined' ? __DEV__ : process.env.NODE_ENV !== 'production'
+
 export const store = configureStore({
     reducer: {
         tracks: addTracksReducer,
@@ -25,7 +27,7 @@ export const store = configureStore({
         playerQueue: playerQueueReducer,
     },
     middleware: (getDefaultMiddleware) =>
-        getDefaultMiddleware().prepend(
+        getDefaultMiddleware({ immutableCheck: isDev ? { warnAfter: 64, ignoredPaths: ['tracks', 'playerQueue.queue'] } : false, serializableCheck: isDev ? { warnAfter: 64, ignoredPaths: ['tracks', 'playerQueue.queue'] } : false, }).prepend(
             playerQueueListenerMiddleware.middleware,
             playlistListenerMiddleware.middleware,
         ),
