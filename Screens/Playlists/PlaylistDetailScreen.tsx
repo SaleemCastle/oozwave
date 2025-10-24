@@ -35,6 +35,7 @@ import { PlaylistsStackParamList } from '../../types'
 import { ITrack } from '../../Store/Actions/currentTrack.actions'
 import { Colors, Images } from '../../Constants'
 import { CoverImage } from 'react-native-get-music-files-v3dev-test'
+import { toggleFavorite } from '../../state/favorites'
 
 const { colors, shadows } = tokens
 
@@ -231,6 +232,9 @@ const PlaylistDetailScreen: React.FC = () => {
                             { item.artist ?? 'Unknown artist' }
                         </Text>
                     </View>
+                    <Pressable onPress={() => dispatch(toggleFavorite(item.id))} hitSlop={12} style={{ marginRight: 8 }}>
+                        <Icon name='heart' size={18} color={ favoriteSet.has(item.id) ? colors.neonMagenta : 'rgba(255,255,255,0.35)' } />
+                    </Pressable>
                     <Text style={ styles.trackDuration }>
                         { item.duration ? formatDuration(item.duration) : '' }
                     </Text>
@@ -238,7 +242,7 @@ const PlaylistDetailScreen: React.FC = () => {
                 </Pressable>
             </Swipeable>
         ),
-        [closeSwipe, handleOpenMoveModal, handleRemoveTrack, handleTrackPress],
+        [closeSwipe, handleOpenMoveModal, handleRemoveTrack, handleTrackPress, favoriteSet, dispatch],
     )
 
     if (!playlist) {
@@ -727,3 +731,5 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
 })
+    const favoriteIds = useAppSelector((s) => (s as any).favorites?.ids as string[] || [])
+    const favoriteSet = useMemo(() => new Set(favoriteIds), [favoriteIds])

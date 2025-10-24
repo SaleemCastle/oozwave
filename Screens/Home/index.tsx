@@ -34,6 +34,7 @@ import TrackCarousel from '../../Components/TrackCarousel'
 import { playTracksNow } from '../../state/playerQueue'
 import { trackToQueueItem } from '../../state/playerQueue/utils'
 import { colors } from '../../theme/tokens'
+import { toggleFavorite } from '../../state/favorites'
 // import { Easing } from 'react-native-reanimated'
 
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs'
@@ -92,6 +93,8 @@ const Home = ({ navigation }: HomeProps) => {
     const currentTrack = useAppSelector((state) => state.currentTrack)
     const permission = useAppSelector((state: RootState) => state.permission)
     const dispatch = useAppDispatch()
+    const favoriteIds = useAppSelector((s) => (s as any).favorites?.ids as string[] || [])
+    const isMiniFavorite = currentTrack ? favoriteIds.includes(String(currentTrack.id)) : false
     let isPlaying = playerState === State.Playing.toString()
     const progress = useProgress(1)
 
@@ -345,7 +348,7 @@ const Home = ({ navigation }: HomeProps) => {
                 <BottomSection>
                     <BottomBar>
                         <Animated.View style={{height: '100%', width: animatedWidth, backgroundColor: Colors.background, position: 'absolute', opacity: 0.3}}/>
-                        <Pressable style={ styles.playerContainer } onPress={() => navigation.navigate('Player')}>
+                        <Pressable style={ styles.playerContainer } onPress={() => navigation.navigate('Player')} onLongPress={() => { if (currentTrack) dispatch(toggleFavorite(String(currentTrack.id))) }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', flex: 1 }}>
                             <CoverImage
                                 //@ts-ignore
@@ -359,7 +362,9 @@ const Home = ({ navigation }: HomeProps) => {
                                     <McText medium size={ 12 } color={ Colors.grey3 } style={{ marginTop: 4 }} numberOfLines={ 1 }>{ currentTrack?.artist }</McText>
                                 </View>
                             </View>
-
+                            <Pressable onPress={() => { if (currentTrack) dispatch(toggleFavorite(String(currentTrack.id))) }} hitSlop={12} style={{ marginHorizontal: 8 }}>
+                                <McVectorIcon type="Feather" name="heart" color={ isMiniFavorite ? colors.neonMagenta : Colors.grey4 } size={18} />
+                            </Pressable>
                             <PlayButton size={ 46 } circle={ 41.28 } icon={ isPlaying ? Images.pause : Images.miniplay} onPress={ handleMiniPlayer }></PlayButton>
                         </Pressable>
                     </BottomBar>

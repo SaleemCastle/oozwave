@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { StatusBar, TouchableOpacity, View } from 'react-native'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Animated, Easing, Pressable, StatusBar, TouchableOpacity, View } from 'react-native'
 import Slider from '@react-native-community/slider'
 import TrackPlayer, { State, usePlaybackState, useProgress } from 'react-native-track-player'
 import Icon from 'react-native-vector-icons/Feather'
+import MCIcon from 'react-native-vector-icons/MaterialCommunityIcons'
 import styled from 'styled-components/native'
 
 import { Colors, Images } from '../../Constants'
@@ -22,6 +23,8 @@ import {
     setPosition as setQueuePosition,
 } from '../../state/playerQueue'
 import { colors } from '../../theme/tokens'
+import { useDoubleTap } from '../../hooks/useDoubleTap'
+import { selectIsFavoriteById, toggleFavorite } from '../../state/favorites'
 
 const formatDuration = (ms: number) => {
     if (!ms || Number.isNaN(ms)) {
@@ -42,6 +45,37 @@ const Player = ({ navigation }: PlayerProps) => {
     const playbackMeta = useAppSelector(selectPlaybackMeta)
     const currentPlayerState = useAppSelector((state) => state.currentPlayerState.playerState)
     const libraryTracks = useAppSelector((state) => state.tracks as ITrack[])
+    const isFavorite = useAppSelector(selectIsFavoriteById(currentQueueItem?.id))
+
+    const heartScale = useRef(new Animated.Value(0)).current
+    const heartOpacity = useRef(new Animated.Value(0)).current
+
+    const animateHeart = useCallback(() => {
+        heartScale.setValue(0.6)
+        heartOpacity.setValue(0.0)
+        Animated.parallel([
+            Animated.timing(heartScale, { toValue: 1, duration: 220, easing: Easing.out(Easing.back(2)), useNativeDriver: true }),
+            Animated.timing(heartOpacity, { toValue: 1, duration: 180, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+        ]).start(({ finished }) => {
+            if (finished) {
+                Animated.timing(heartOpacity, { toValue: 0, delay: 400, duration: 220, easing: Easing.in(Easing.quad), useNativeDriver: true }).start()
+            }
+        })
+    }, [heartOpacity, heartScale])
+
+    const handleToggleFavorite = useCallback(() => {
+        if (!currentQueueItem) return
+        dispatch(toggleFavorite(String(currentQueueItem.id)))
+    }, [dispatch, currentQueueItem])
+
+    const handleArtworkDoubleTap = useDoubleTap({
+        onSingle: undefined,
+        onDouble: () => {
+            handleToggleFavorite()
+            animateHeart()
+        },
+        delay: 250,
+    })
 
     const [sliderValue, setSliderValue] = useState(0)
     const [isSeeking, setIsSeeking] = useState(false)
@@ -177,19 +211,38 @@ const Player = ({ navigation }: PlayerProps) => {
 
             <MusicDetailSection>
                 <View style={{ marginHorizontal: 81, marginVertical: 60, borderRadius: 214 }}>
-                    { currentQueueItem ? (
-                        <CoverImage
-                            // @ts-ignore - library expects file path string
-                            source={ currentQueueItem.path }
-                            placeHolder={ Images.DefaultMusicIcon }
-                            width={ 214 }
-                            height={ 214 }
-                        />
-                    ) : (
-                        <PlaceholderArtwork>
-                            <Icon name='music' size={ 72 } color={ Colors.grey4 } />
-                        </PlaceholderArtwork>
-                    ) }
+                    <Pressable onPress={ handleArtworkDoubleTap }>
+                        { currentQueueItem ? (
+                            <CoverImage
+                                // @ts-ignore - library expects file path string
+                                source={ currentQueueItem.path }
+                                placeHolder={ Images.DefaultMusicIcon }
+                                width={ 214 }
+                                height={ 214 }
+                            />
+                        ) : (
+                            <PlaceholderArtwork>
+                                <Icon name='music' size={ 72 } color={ Colors.grey4 } />
+                            </PlaceholderArtwork>
+                        ) }
+                        {/* Persistent like control at bottom-right */}
+                        <View style={{ position: 'absolute', right: 8, bottom: 8 }}>
+                            <TouchableOpacity onPress={ handleToggleFavorite } hitSlop={ 12 } accessibilityRole='button' accessibilityLabel={ isFavorite ? 'Remove from favorites' : 'Add to favorites' }>
+                                {/* Filled heart with white outline, Airbnb-like */}
+                                <View>
+                                    <MCIcon name='heart' size={22} color={ isFavorite ? colors.neonMagenta : 'rgba(180,180,180,0.8)' } style={{ position: 'absolute' }} />
+                                    <MCIcon name='heart-outline' size={22} color={ '#FFFFFF' } />
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                        {/* Airbnb-like animated heart overlay */}
+                        <Animated.View
+                            pointerEvents='none'
+                            style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', opacity: heartOpacity, transform: [{ scale: heartScale }] }}
+                        >
+                            <MCIcon name='heart' size={ 84 } color={ colors.neonMagenta } />
+                        </Animated.View>
+                    </Pressable>
                 </View>
 
                 <View style={{ marginTop: 16, justifyContent: 'center', alignItems: 'center' }}>

@@ -4,7 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 
 import TabBar from '../Components/TabBar'
 import { Colors } from '../Constants'
-import { Home, Library, Billboards } from '../Screens'
+import { Home, Library, Favorites as FavoritesScreen } from '../Screens'
 
 export type AppTabParamList = {
     Home: undefined
@@ -26,7 +26,6 @@ const PlaceholderScreen = (title: string) => {
     return Component
 }
 
-const FavoritesScreen = PlaceholderScreen('Favorites')
 const ProfileScreen = PlaceholderScreen('Profile')
 
 const AppTabs: React.FC = () => {

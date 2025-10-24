@@ -24,6 +24,7 @@ import { ITrack } from '../../Store/Actions/currentTrack.actions'
 import { playlistActions, selectSortedAndFilteredPlaylists } from '../../state/playlists'
 import { colors as themeColors } from '../../theme/tokens'
 import { playTracksNow } from '../../state/playerQueue'
+import { toggleFavorite } from '../../state/favorites'
 import { trackToQueueItem } from '../../state/playerQueue/utils'
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -229,6 +230,37 @@ const Library: React.FC<LibraryProps> = ({ navigation }) => {
     navigation.navigate('Player')
   }, [dispatch, navigation])
 
+  // Double-tap to like on song rows; single tap plays
+  const lastTapTimeRef = React.useRef(0)
+  const lastTapIdRef = React.useRef<string | null>(null)
+  const singleTapTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleSongRowPress = useCallback((track: ITrack) => {
+    const now = Date.now()
+    const id = String(track.id)
+    const isDouble = lastTapIdRef.current === id && now - lastTapTimeRef.current < 250
+    if (isDouble) {
+      if (singleTapTimeoutRef.current) {
+        clearTimeout(singleTapTimeoutRef.current)
+        singleTapTimeoutRef.current = null
+      }
+      lastTapTimeRef.current = 0
+      lastTapIdRef.current = null
+      dispatch(toggleFavorite(id))
+      return
+    }
+    lastTapTimeRef.current = now
+    lastTapIdRef.current = id
+    if (singleTapTimeoutRef.current) {
+      clearTimeout(singleTapTimeoutRef.current)
+      singleTapTimeoutRef.current = null
+    }
+    singleTapTimeoutRef.current = setTimeout(() => {
+      handlePlayTrack(track)
+      singleTapTimeoutRef.current = null
+    }, 250)
+  }, [dispatch, handlePlayTrack])
+
   const playMultiple = useCallback((list: ITrack[]) => {
     // Convert to queue items, drop heavy artwork to reduce memory usage for large queues
     const all = list
@@ -306,7 +338,7 @@ const Library: React.FC<LibraryProps> = ({ navigation }) => {
         <View style={{ flexDirection: 'row' }}>
           {SORT_OPTIONS_SONGS.map((opt) => (
             <SortButton key={opt.value} onPress={() => setSongSort(opt.value)}>
-              <McText semi size={12} color={songSort === opt.value ? Colors.white : Colors.grey4}>{opt.label}</McText>
+              <McText semi size={12} color={songSort === opt.value ? Colors.accent : Colors.grey4}>{opt.label}</McText>
             </SortButton>
           ))}
         </View>
@@ -320,9 +352,9 @@ const Library: React.FC<LibraryProps> = ({ navigation }) => {
         </View>
       )}
       <View style={{ flexDirection: 'row' }}>
-        {section === 'Songs' && (
+        {/* {section === 'Songs' && (
           <NeonButton circular size={44} onPress={() => playMultiple(sortedTracks)} icon={<McVectorIcon type="Feather" name="play" color={Colors.white} size={20} />} />
-        )}
+        )} */}
         <View style={{ width: 8 }} />
         <NeonButton circular size={44} onPress={handleCreatePlaylist} icon={<McVectorIcon type="Feather" name="plus" color={Colors.white} size={20} />} />
       </View>
@@ -384,7 +416,7 @@ const Library: React.FC<LibraryProps> = ({ navigation }) => {
       keyExtractor={(t) => String(t.id)}
       ListHeaderComponent={renderMemoryLane()}
       renderItem={({ item }) => (
-        <SongRow onPress={() => handlePlayTrack(item)} onLongPress={() => setConfirm({ visible: true, title: 'Offline', message: 'Make song available offline?', onConfirm: () => toggleOffline('tracks', String(item.id)) })}>
+        <SongRow onPress={() => handleSongRowPress(item)} onLongPress={() => setConfirm({ visible: true, title: 'Offline', message: 'Make song available offline?', onConfirm: () => toggleOffline('tracks', String(item.id)) })}>
           <CoverImage //@ts-ignore
             src={item.path}
             placeHolder={ Images.DefaultMusicIcon }
@@ -506,7 +538,7 @@ const Library: React.FC<LibraryProps> = ({ navigation }) => {
           contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 120 }}
           ListHeaderComponent={<View>{renderHeaderCommon()}{renderMemoryLane()}</View>}
           renderItem={({ item }) => (
-            <SongRow onPress={() => handlePlayTrack(item)} onLongPress={() => setConfirm({ visible: true, title: 'Offline', message: 'Make song available offline?', onConfirm: () => toggleOffline('tracks', String(item.id)) })}>
+            <SongRow onPress={() => handleSongRowPress(item)} onLongPress={() => setConfirm({ visible: true, title: 'Offline', message: 'Make song available offline?', onConfirm: () => toggleOffline('tracks', String(item.id)) })}>
               <CoverImage //@ts-ignore
                 src={item.path}
                 placeHolder={ Images.DefaultMusicIcon }

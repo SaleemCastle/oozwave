@@ -234,16 +234,34 @@ export const playTracksNow = createAsyncThunk<void, QueueItem[], { state: RootSt
         if (!Array.isArray(queueItems) || queueItems.length === 0) {
             return
         }
+
         const { repeatMode } = getState().playerQueue
+        const CHUNK_SIZE = 200
+        const firstChunkSize = Math.min(queueItems.length, CHUNK_SIZE)
+        const firstChunk = queueItems.slice(0, firstChunkSize)
+
         await ensureTrackPlayerReady()
         await TrackPlayer.reset()
-        await TrackPlayer.add(queueItems.map(queueItemToTrackPlayer))
+        await TrackPlayer.add(firstChunk.map(queueItemToTrackPlayer))
         await applyRepeatMode(repeatMode)
         await TrackPlayer.play()
+
+        // Reflect intended full queue in Redux immediately to keep UI consistent
         dispatch(setOriginalQueue(queueItems))
         dispatch(setQueue({ queue: queueItems, currentIndex: 0 }))
         dispatch(setPosition(0))
         dispatch(persistQueueToStorage())
+
+        // Add remaining items in background-friendly chunks to avoid large bridge payloads
+        for (let i = firstChunkSize; i < queueItems.length; i += CHUNK_SIZE) {
+            const batch = queueItems.slice(i, i + CHUNK_SIZE)
+            try {
+                await TrackPlayer.add(batch.map(queueItemToTrackPlayer))
+            } catch (error) {
+                console.warn('Failed to add queue batch', { index: i, size: batch.length, error })
+                break
+            }
+        }
     },
 )
 
