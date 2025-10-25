@@ -317,6 +317,12 @@ const PlaylistDetailScreen: React.FC = () => {
                                 <Icon name='plus' size={16} color={ colors.pureWhite } />
                                 <McText medium size={12} color={ colors.pureWhite } style={{ marginLeft: 6 }}>Add</McText>
                             </ActionPill>
+                            <ActionPill onPress={ handleAddCurrentTrack } disabled={ !currentTrack || isCurrentTrackInPlaylist }>
+                                <Icon name='plus-circle' size={16} color={ colors.pureWhite } />
+                                <McText medium size={12} color={ colors.pureWhite } style={{ marginLeft: 6 }}>
+                                    { currentTrack ? (isCurrentTrackInPlaylist ? 'Added' : 'Add current') : 'No track' }
+                                </McText>
+                            </ActionPill>
                             <ActionPill onPress={ handleDuplicate }>
                                 <Icon name='copy' size={16} color={ colors.pureWhite } />
                                 <McText medium size={12} color={ colors.pureWhite } style={{ marginLeft: 6 }}>Duplicate</McText>
@@ -335,18 +341,7 @@ const PlaylistDetailScreen: React.FC = () => {
                 showsVerticalScrollIndicator={ false }
             />
 
-            <View style={ styles.addCurrentContainer }>
-                <NeonButton
-                    title={ currentTrack ? 'Add current track' : 'Nothing playing' }
-                    onPress={ handleAddCurrentTrack }
-                    disabled={ !currentTrack || isCurrentTrackInPlaylist }
-                    fullWidth
-                    style={ styles.addCurrentButton }
-                />
-                { currentTrack && isCurrentTrackInPlaylist ? (
-                    <McText regular style={ styles.helperText }>Current track already in playlist</McText>
-                ) : null }
-            </View>
+            {/* Moved 'Add current track' action into ActionsWrap at the top */}
 
             <ConfirmDialog
                 visible={ deleteConfirm }
@@ -620,22 +615,7 @@ const styles = StyleSheet.create({
         marginLeft: 6,
         fontWeight: '600',
     },
-    addCurrentContainer: {
-        position: 'absolute',
-        left: 24,
-        right: 24,
-        bottom: 36,
-        ...shadows.neonPill,
-    },
-    addCurrentButton: {
-        alignSelf: 'stretch',
-    },
-    helperText: {
-        marginTop: 8,
-        color: 'rgba(255,255,255,0.6)',
-        fontSize: 13,
-        textAlign: 'center',
-    },
+    
     footerSpace: {
         height: 180,
     },
