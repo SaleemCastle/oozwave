@@ -351,10 +351,18 @@ const Library: React.FC<LibraryProps> = ({ navigation }) => {
           ))}
         </View>
       )}
-      <View style={{ flexDirection: 'row' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         {/* {section === 'Songs' && (
           <NeonButton circular size={44} onPress={() => playMultiple(sortedTracks)} icon={<McVectorIcon type="Feather" name="play" color={Colors.white} size={20} />} />
         )} */}
+        {section === 'Playlists' && (
+          <>
+            <Pressable onPress={() => navigation.navigate('Playlists')} style={{ paddingVertical: 6, paddingHorizontal: 10, backgroundColor: Colors.secondary, borderRadius: 8 }}>
+              <McText semi size={12} color={Colors.grey4}>See all</McText>
+            </Pressable>
+            <View style={{ width: 8 }} />
+          </>
+        )}
         <View style={{ width: 8 }} />
         <NeonButton circular size={44} onPress={handleCreatePlaylist} icon={<McVectorIcon type="Feather" name="plus" color={Colors.white} size={20} />} />
       </View>

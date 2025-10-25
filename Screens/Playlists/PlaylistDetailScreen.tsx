@@ -11,10 +11,13 @@ import {
 import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist'
 import { RectButton, Swipeable } from 'react-native-gesture-handler'
 import Icon from 'react-native-vector-icons/Feather'
+import MCIcon from 'react-native-vector-icons/MaterialCommunityIcons'
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native'
 import LinearGradient from 'react-native-linear-gradient'
+import styled from 'styled-components/native'
 
-import { ConfirmDialog, McImage, McText, NeonButton, NeonCard } from '../../Components'
+import { ConfirmDialog, McImage, McText, NeonButton } from '../../Components'
+import PlaylistHeroCard from '../../Components/PlaylistHeroCard'
 import tokens from '../../theme/tokens'
 import {
     playlistActions,
@@ -29,6 +32,8 @@ import {
     startPlaylistPlayback,
     enqueuePlayNext,
     enqueueToQueue,
+    toggleShuffle,
+    selectPlaybackMeta,
 } from '../../state/playerQueue'
 import { useAppDispatch, useAppSelector } from '../../hooks/reduxHooks'
 import { PlaylistsStackParamList } from '../../types'
@@ -60,6 +65,11 @@ const PlaylistDetailScreen: React.FC = () => {
     const [selectedAddIds, setSelectedAddIds] = useState<Set<string>>(new Set())
 
     const swipeRefs = useRef<Record<string, Swipeable | null>>({})
+
+    // Favorites lookup for quick heart state in list
+    const favoriteIds = useAppSelector((s) => ((s as any).favorites?.ids as string[]) || [])
+    const favoriteSet = useMemo(() => new Set(favoriteIds), [favoriteIds])
+    const playbackMeta = useAppSelector(selectPlaybackMeta as any) as { isShuffle: boolean }
 
     useEffect(() => {
         if (!playlist) {
@@ -207,14 +217,14 @@ const PlaylistDetailScreen: React.FC = () => {
                 }}
                 renderLeftActions={() => (
                     <RectButton style={[styles.swipeAction, styles.moveAction]} onPress={() => handleOpenMoveModal(item)}>
-                        <Icon name='folder-plus' size={ 18 } color={ colors.grey5 } />
-                        <Text style={ styles.actionText }>Move</Text>
+                        <Icon name='folder-plus' size={ 18 } color={ colors.pureWhite } />
+                        <McText regular style={ styles.actionText }>Move</McText>
                     </RectButton>
                 )}
                 renderRightActions={() => (
                     <RectButton style={[styles.swipeAction, styles.deleteAction]} onPress={() => handleRemoveTrack(item.id)}>
-                        <Icon name='trash-2' size={ 18 } color='#FFF' />
-                        <Text style={ styles.actionText }>Delete</Text>
+                        <Icon name='trash-2' size={ 18 } color={colors.pureWhite} />
+                        <McText regular style={ styles.actionText }>Delete</McText>
                     </RectButton>
                 )}
             >
@@ -225,19 +235,22 @@ const PlaylistDetailScreen: React.FC = () => {
                     style={[styles.trackRow, isActive ? styles.trackRowActive : null]}
                 >
                     <View style={ styles.trackInfo }>
-                        <Text style={ styles.trackTitle } numberOfLines={ 1 }>
+                        <McText semi style={ styles.trackTitle } numberOfLines={ 1 }>
                             { item.title }
-                        </Text>
-                        <Text style={ styles.trackMeta } numberOfLines={ 1 }>
+                        </McText>
+                        <McText regular style={ styles.trackMeta } numberOfLines={ 1 }>
                             { item.artist ?? 'Unknown artist' }
-                        </Text>
+                        </McText>
                     </View>
-                    <Pressable onPress={() => dispatch(toggleFavorite(item.id))} hitSlop={12} style={{ marginRight: 8 }}>
-                        <Icon name='heart' size={18} color={ favoriteSet.has(item.id) ? colors.neonMagenta : 'rgba(255,255,255,0.35)' } />
+                    <Pressable onPress={() => dispatch(toggleFavorite(item.id))} hitSlop={12} style={{ marginRight: 8 }} accessibilityRole='button' accessibilityLabel={ favoriteSet.has(item.id) ? 'Remove from favorites' : 'Add to favorites' }>
+                        <View>
+                            <MCIcon name='heart' size={18} color={ favoriteSet.has(item.id) ? colors.neonMagenta : 'rgba(180,180,180,0.8)' } style={{ position: 'absolute' }} />
+                            <MCIcon name='heart-outline' size={18} color={'#FFFFFF'} />
+                        </View>
                     </Pressable>
-                    <Text style={ styles.trackDuration }>
+                    <McText regular style={ styles.trackDuration }>
                         { item.duration ? formatDuration(item.duration) : '' }
-                    </Text>
+                    </McText>
                     <Icon name='menu' size={ 18 } color='rgba(255,255,255,0.5)' />
                 </Pressable>
             </Swipeable>
@@ -253,6 +266,15 @@ const PlaylistDetailScreen: React.FC = () => {
     const updatedLabel = formatRelativeUpdatedAt(playlist.updatedAt)
     const isCurrentTrackInPlaylist = currentTrack ? playlist.trackIds.includes(String(currentTrack.id)) : false
 
+    const formatDuration = (ms?: number) => {
+        if (!ms || Number.isNaN(ms)) return ''
+        const totalSeconds = Math.floor(ms / 1000)
+        const minutes = Math.floor(totalSeconds / 60)
+        const seconds = totalSeconds % 60
+        const padded = seconds < 10 ? `0${seconds}` : `${seconds}`
+        return `${minutes}:${padded}`
+    }
+
     return (
         <View style={ styles.screen }>
             <DraggableFlatList
@@ -263,74 +285,47 @@ const PlaylistDetailScreen: React.FC = () => {
                 activationDistance={ 12 }
                 ListHeaderComponent={ (
                     <View style={ styles.headerContainer }>
-                        <NeonCard accentColor={ playlist.color ?? colors.neonMagenta } style={ styles.metaCard }>
-                            <View style={ styles.metaRow }>
-                                <View style={[styles.playlistAvatar, { borderColor: playlist.color ?? colors.neonMagenta }]}>
-                                    { playlist.emoji ? (
-                                        <Text style={ styles.playlistEmoji }>{ playlist.emoji }</Text>
-                                    ) : (
-                                        <LinearGradient
-                                            colors={[playlist.color ?? colors.neonMagenta, 'rgba(255,255,255,0.12)']}
-                                            style={ styles.playlistGradient }
-                                        />
-                                    ) }
-                                </View>
-                                <View style={ styles.metaInfo }>
-                                    <Text style={ styles.metaTitle } numberOfLines={ 1 }>
-                                        { playlist.name }
-                                    </Text>
-                                    <Text style={ styles.metaSubtitle }>
-                                    { trackCountLabel } - { updatedLabel }
-                                    </Text>
-                                    { playlist.description ? (
-                                        <Text style={ styles.metaDescription } numberOfLines={ 2 }>
-                                            { playlist.description }
-                                        </Text>
-                                    ) : null }
-                                </View>
-                            </View>
-                            <View style={ styles.metaFooter }>
-                                <Text style={ styles.privacyBadge }>
-                                    { playlist.isPublic ? 'Public' : 'Private' }
-                                </Text>
-                            </View>
-                        </NeonCard>
-                        <View style={ styles.actionsRow }>
-                            <NeonButton
-                                title='Play'
-                                onPress={ handlePlayPlaylist }
-                                style={ styles.actionButton }
-                                fullWidth
-                                disabled={ !tracks.length }
-                            />
-                            <NeonButton
-                                title='Edit'
-                                variant='secondary'
-                                onPress={ () => navigation.navigate('PlaylistEditor', { mode: 'edit', playlistId }) }
-                                style={ styles.actionButton }
-                                fullWidth
-                            />
-                            <NeonButton
-                                title='Add tracks'
-                                onPress={ () => setAddTracksVisible(true) }
-                                style={ styles.actionButton }
-                                fullWidth
-                            />
-                            <NeonButton
-                                title='Duplicate'
-                                variant='secondary'
-                                onPress={ handleDuplicate }
-                                style={ styles.actionButton }
-                                fullWidth
-                            />
-                            <NeonButton
-                                title='Delete'
-                                variant='danger'
-                                onPress={ () => setDeleteConfirm(true) }
-                                style={ styles.actionButton }
-                                fullWidth
-                            />
-                        </View>
+                        <PlaylistHeroCard
+                            title={ playlist.name }
+                            subtitle={`${trackCountLabel} · ${updatedLabel}`}
+                            description={ playlist.description ?? '' }
+                            accentColor={ playlist.color ?? colors.neonMagenta }
+                            emoji={ playlist.emoji ?? null }
+                            privacyLabel={ playlist.isPublic ? 'Public' : 'Private' }
+                            imagePaths={ (() => {
+                                try {
+                                    const libMap = new Map<string, string>()
+                                    ;(libraryTracks ?? []).forEach((t) => libMap.set(String(t.id), t.path))
+                                    return tracks.map((t) => libMap.get(String(t.id))).filter((p): p is string => !!p).slice(0, 6)
+                                } catch { return [] }
+                            })() }
+                        />
+                        <ActionsWrap>
+                            <ActionPill onPress={ handlePlayPlaylist } disabled={ !tracks.length }>
+                                <Icon name='play' size={16} color={ colors.pureWhite } />
+                                <McText medium size={12} color={ colors.pureWhite } style={{ marginLeft: 6 }}>Play</McText>
+                            </ActionPill>
+                            <ActionPill onPress={ () => { if (!tracks.length) return; if (!playbackMeta?.isShuffle) { dispatch(toggleShuffle() as any) }; dispatch(startPlaylistPlayback({ playlistId }) as any) } } disabled={ !tracks.length }>
+                                <Icon name='shuffle' size={16} color={ colors.pureWhite } />
+                                <McText medium size={12} color={ colors.pureWhite } style={{ marginLeft: 6 }}>Shuffle</McText>
+                            </ActionPill>
+                            <ActionPill onPress={ () => navigation.navigate('PlaylistEditor', { mode: 'edit', playlistId }) }>
+                                <Icon name='edit' size={16} color={ colors.pureWhite } />
+                                <McText medium size={12} color={ colors.pureWhite } style={{ marginLeft: 6 }}>Edit</McText>
+                            </ActionPill>
+                            <ActionPill onPress={ () => setAddTracksVisible(true) }>
+                                <Icon name='plus' size={16} color={ colors.pureWhite } />
+                                <McText medium size={12} color={ colors.pureWhite } style={{ marginLeft: 6 }}>Add</McText>
+                            </ActionPill>
+                            <ActionPill onPress={ handleDuplicate }>
+                                <Icon name='copy' size={16} color={ colors.pureWhite } />
+                                <McText medium size={12} color={ colors.pureWhite } style={{ marginLeft: 6 }}>Duplicate</McText>
+                            </ActionPill>
+                            <ActionPill danger onPress={ () => setDeleteConfirm(true) }>
+                                <Icon name='trash-2' size={16} color={ colors.pureWhite } />
+                                <McText medium size={12} color={ colors.pureWhite } style={{ marginLeft: 6 }}>Delete</McText>
+                            </ActionPill>
+                        </ActionsWrap>
                     </View>
                 ) }
                 ListFooterComponent={ (
@@ -349,7 +344,7 @@ const PlaylistDetailScreen: React.FC = () => {
                     style={ styles.addCurrentButton }
                 />
                 { currentTrack && isCurrentTrackInPlaylist ? (
-                    <Text style={ styles.helperText }>Current track already in playlist</Text>
+                    <McText regular style={ styles.helperText }>Current track already in playlist</McText>
                 ) : null }
             </View>
 
@@ -407,10 +402,10 @@ const MoveModal: React.FC<MoveModalProps> = ({ visible, track, playlists, onClos
         <Modal transparent visible animationType='fade' onRequestClose={ onClose }>
             <View style={ styles.modalOverlay }>
                 <View style={ styles.modalCard }>
-                    <Text style={ styles.modalTitle }>Move track</Text>
-                    <Text style={ styles.modalSubtitle } numberOfLines={ 2 }>
+                    <McText semi style={ styles.modalTitle }>Move track</McText>
+                    <McText regular style={ styles.modalSubtitle } numberOfLines={ 2 }>
                         { track.title }
-                    </Text>
+                    </McText>
                     <ScrollView style={ styles.modalList }>
                         { playlists.map((playlist) => (
                             <Pressable
@@ -418,10 +413,10 @@ const MoveModal: React.FC<MoveModalProps> = ({ visible, track, playlists, onClos
                                 style={ styles.modalListItem }
                                 onPress={ () => onMove(playlist.id) }
                             >
-                                <Text style={ styles.modalListText }>{ playlist.name }</Text>
-                                <Text style={ styles.modalListMeta }>
+                                <McText regular style={ styles.modalListText }>{ playlist.name }</McText>
+                                <McText regular style={ styles.modalListMeta }>
                                     { playlist.trackIds.length } tracks
-                                </Text>
+                                </McText>
                             </Pressable>
                         )) }
                     </ScrollView>
@@ -573,9 +568,6 @@ const styles = StyleSheet.create({
     },
     actionsRow: {
         flexDirection: 'column',
-    },
-    actionButton: {
-        marginBottom: 12,
     },
     listContent: {
         paddingBottom: 140,
@@ -731,5 +723,21 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
 })
-    const favoriteIds = useAppSelector((s) => (s as any).favorites?.ids as string[] || [])
-    const favoriteSet = useMemo(() => new Set(favoriteIds), [favoriteIds])
+
+const ActionsWrap = styled.View`
+  margin: 8px 0 24px;
+  padding: 0 24px;
+  flex-direction: row;
+  flex-wrap: wrap;
+`
+
+const ActionPill = styled.Pressable<{ danger?: boolean; disabled?: boolean }>`
+  flex-direction: row;
+  align-items: center;
+  padding: 8px 12px;
+  margin-right: 10px;
+  margin-top: 10px;
+  border-radius: 999px;
+  background-color: ${({ danger }) => (danger ? 'rgba(255,0,120,0.3)' : Colors.secondary)};
+  opacity: ${({ disabled }) => (disabled ? 0.6 : 1)};
+`

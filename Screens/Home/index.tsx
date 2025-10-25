@@ -34,6 +34,7 @@ import TrackCarousel from '../../Components/TrackCarousel'
 import { playTracksNow } from '../../state/playerQueue'
 import { trackToQueueItem } from '../../state/playerQueue/utils'
 import { colors } from '../../theme/tokens'
+import MCIcon from 'react-native-vector-icons/MaterialCommunityIcons'
 import { toggleFavorite } from '../../state/favorites'
 // import { Easing } from 'react-native-reanimated'
 
@@ -362,8 +363,11 @@ const Home = ({ navigation }: HomeProps) => {
                                     <McText medium size={ 12 } color={ Colors.grey3 } style={{ marginTop: 4 }} numberOfLines={ 1 }>{ currentTrack?.artist }</McText>
                                 </View>
                             </View>
-                            <Pressable onPress={() => { if (currentTrack) dispatch(toggleFavorite(String(currentTrack.id))) }} hitSlop={12} style={{ marginHorizontal: 8 }}>
-                                <McVectorIcon type="Feather" name="heart" color={ isMiniFavorite ? colors.neonMagenta : Colors.grey4 } size={18} />
+                            <Pressable onPress={() => { if (currentTrack) dispatch(toggleFavorite(String(currentTrack.id))) }} hitSlop={12} style={{ marginHorizontal: 8 }} accessibilityRole='button' accessibilityLabel={ isMiniFavorite ? 'Remove from favorites' : 'Add to favorites' }>
+                                <View>
+                                    <MCIcon name='heart' size={20} color={ isMiniFavorite ? colors.neonMagenta : 'rgba(180,180,180,0.8)' } style={{ position: 'absolute' }} />
+                                    <MCIcon name='heart-outline' size={20} color={'#FFFFFF'} />
+                                </View>
                             </Pressable>
                             <PlayButton size={ 46 } circle={ 41.28 } icon={ isPlaying ? Images.pause : Images.miniplay} onPress={ handleMiniPlayer }></PlayButton>
                         </Pressable>
