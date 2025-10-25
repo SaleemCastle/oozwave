@@ -66,6 +66,10 @@ const Discover: React.FC<Props> = ({ navigation }) => {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: 24, paddingVertical: 8 }}
+            removeClippedSubviews
+            windowSize={5}
+            initialNumToRender={6}
+            getItemLayout={(_, index) => ({ length: 154, offset: 154 * index, index })}
             renderItem={({ item }: any) => (
               loading ? (
                 <Card>
@@ -99,6 +103,10 @@ const Discover: React.FC<Props> = ({ navigation }) => {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: 24, paddingVertical: 8 }}
+            removeClippedSubviews
+            windowSize={5}
+            initialNumToRender={6}
+            getItemLayout={(_, index) => ({ length: 136, offset: 136 * index, index })}
             renderItem={({ item }: any) => (
               loading ? (
                 <CircleCard>
@@ -130,6 +138,10 @@ const Discover: React.FC<Props> = ({ navigation }) => {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: 24, paddingVertical: 8 }}
+            removeClippedSubviews
+            windowSize={5}
+            initialNumToRender={6}
+            getItemLayout={(_, index) => ({ length: 154, offset: 154 * index, index })}
             renderItem={({ item }: any) => (
               loading ? (
                 <Card>
@@ -163,6 +175,10 @@ const Discover: React.FC<Props> = ({ navigation }) => {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: 24, paddingVertical: 8 }}
+            removeClippedSubviews
+            windowSize={5}
+            initialNumToRender={10}
+            getItemLayout={(_, index) => ({ length: 100, offset: 100 * index, index })}
             renderItem={({ item }: any) => (
               loading ? (
                 <Chip><SkeletonRect style={{ width: 60, height: 14, borderRadius: 999 }} /></Chip>
@@ -187,6 +203,10 @@ const Discover: React.FC<Props> = ({ navigation }) => {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: 24, paddingVertical: 8 }}
+            removeClippedSubviews
+            windowSize={5}
+            initialNumToRender={6}
+            getItemLayout={(_, index) => ({ length: 154, offset: 154 * index, index })}
             renderItem={({ item }: any) => (
               loading ? (
                 <Card>
@@ -249,6 +269,10 @@ const Discover: React.FC<Props> = ({ navigation }) => {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: 24, paddingVertical: 8 }}
+            removeClippedSubviews
+            windowSize={5}
+            initialNumToRender={6}
+            getItemLayout={(_, index) => ({ length: 154, offset: 154 * index, index })}
             renderItem={({ item }: any) => (
               loading ? (
                 <Card>
@@ -348,7 +372,7 @@ const Chip = styled.Pressable`
 
 export default Discover
 
-const TrendingCard: React.FC<{ item: any; cover?: any; onPress: () => void }> = ({ item, cover, onPress }) => {
+const TrendingCardBase: React.FC<{ item: any; cover?: any; onPress: () => void }> = ({ item, cover, onPress }) => {
   const scale = useRef(new Animated.Value(1)).current
   const overlayOpacity = useRef(new Animated.Value(0)).current
   const onPressIn = () => Animated.timing(scale, { toValue: 0.98, duration: 80, easing: Easing.out(Easing.quad), useNativeDriver: true }).start()
@@ -380,8 +404,9 @@ const TrendingCard: React.FC<{ item: any; cover?: any; onPress: () => void }> = 
     </Animated.View>
   )
 }
+const TrendingCard = React.memo(TrendingCardBase, (prev, next) => prev.item?.id === next.item?.id && prev.cover === next.cover)
 
-const RevealCard: React.FC<{ cover: any; title: string; subtitle?: string; actions: { icon: 'play'|'shuffle'|'plus' }[]; onPress: () => void }> = ({ cover, title, subtitle, actions, onPress }) => {
+const RevealCardBase: React.FC<{ cover: any; title: string; subtitle?: string; actions: { icon: 'play'|'shuffle'|'plus' }[]; onPress: () => void }> = ({ cover, title, subtitle, actions, onPress }) => {
   const overlayOpacity = useRef(new Animated.Value(0)).current
   const reveal = () => Animated.timing(overlayOpacity, { toValue: 1, duration: 160, useNativeDriver: true }).start()
   const hide = () => Animated.timing(overlayOpacity, { toValue: 0, duration: 200, useNativeDriver: true }).start()
@@ -411,6 +436,7 @@ const RevealCard: React.FC<{ cover: any; title: string; subtitle?: string; actio
     </Card>
   )
 }
+const RevealCard = React.memo(RevealCardBase, (prev, next) => prev.cover === next.cover && prev.title === next.title && prev.subtitle === next.subtitle)
 
 const OverlayWrap = styled.View`
   position: absolute;
