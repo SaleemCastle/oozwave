@@ -276,8 +276,7 @@ const Home = ({ navigation }: HomeProps) => {
 
                 <TitleSection>
                     <McText medium size={ 20 } color={ Colors.grey4 }>Discover</McText>
-
-                    <TouchableWithoutFeedback>
+                    <TouchableWithoutFeedback onPress={() => navigation.navigate('Discover')}>
                         <McImage source={ Images.chevronBlue } />
                     </TouchableWithoutFeedback>
                 </TitleSection>

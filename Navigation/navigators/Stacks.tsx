@@ -43,6 +43,18 @@ const Stacks = (props: IProps) => (
             }}
         />
         <Stack.Screen
+            name='Discover'
+            component={ require('../../Screens/Discover').default }
+            options={{
+                headerShown: false,
+            }}
+        />
+        <Stack.Screen
+            name='DiscoverSection'
+            component={ require('../../Screens/Discover/SectionList').default }
+            options={{ headerShown: false }}
+        />
+        <Stack.Screen
             name='Player'
             component={ Player }
             options={{
