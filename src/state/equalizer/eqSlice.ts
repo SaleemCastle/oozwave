@@ -17,6 +17,7 @@ const initialState: EQState = {
   preset: 'Flat',
   deviceProfile: 'speakers',
   available: true,
+  bassBoost: 0,
 }
 
 export const initEqualizerThunk = createAsyncThunk<boolean, number | undefined, { state: RootStateLike }>(
@@ -100,7 +101,7 @@ export const persistEQToStorageThunk = createAsyncThunk<void, void, { state: Roo
   'equalizer/persist',
   async (_, { getState }) => {
     const eq = getState().equalizer
-    const payload = { bands: eq.bands, preamp: eq.preamp, bypass: eq.bypass, preset: eq.preset }
+    const payload = { bands: eq.bands, preamp: eq.preamp, bypass: eq.bypass, preset: eq.preset, bassBoost: eq.bassBoost ?? 0 }
     await AsyncStorage.setItem(keyForProfile(eq.deviceProfile), JSON.stringify(payload))
   },
 )
@@ -144,14 +145,19 @@ export const eqSlice = createSlice({
     setDeviceProfile(state, action: PayloadAction<DeviceProfile>) {
       state.deviceProfile = action.payload
     },
+    setBassBoost(state, action: PayloadAction<number>) {
+      state.bassBoost = action.payload
+      state.lastAppliedAt = Date.now()
+    },
     setAvailable(state, action: PayloadAction<boolean>) {
       state.available = action.payload
     },
-    setAll(state, action: PayloadAction<{ bands: number[]; preamp: number; bypass: boolean; preset: EQPresetName }>) {
+    setAll(state, action: PayloadAction<{ bands: number[]; preamp: number; bypass: boolean; preset: EQPresetName; bassBoost?: number }>) {
       state.bands = action.payload.bands.slice()
       state.preamp = action.payload.preamp
       state.bypass = action.payload.bypass
       state.preset = action.payload.preset
+      if (typeof action.payload.bassBoost === 'number') state.bassBoost = action.payload.bassBoost
     },
   },
 })
@@ -169,4 +175,3 @@ equalizerListenerMiddleware.startListening({
     api.dispatch(persistEQToStorageThunk())
   },
 })
-

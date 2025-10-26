@@ -11,5 +11,5 @@ export type EQState = {
   deviceProfile: DeviceProfile
   available: boolean
   lastAppliedAt?: number
+  bassBoost?: number
 }
-
