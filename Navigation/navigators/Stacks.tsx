@@ -12,6 +12,7 @@ import {
     PlaylistEditorModal,
     Equalizer
 } from '../../Screens'
+import Preferences from '../../Screens/Preferences'
 import AppTabs from '../AppTabs'
 import { RootStackParamList } from '../../types'
 
@@ -56,6 +57,14 @@ const Stacks = (props: IProps) => (
             component={ Equalizer }
             options={{
                 headerShown: false,
+            }}
+        />
+        <Stack.Screen
+            name='Preferences'
+            component={ Preferences }
+            options={{
+                headerShown: true,
+                title: 'Preferences',
             }}
         />
         <Stack.Screen

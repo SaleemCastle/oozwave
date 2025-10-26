@@ -15,6 +15,8 @@ import {
 import styled from 'styled-components/native'
 import { CoverImage } from 'react-native-get-music-files-v3dev-test'
 import TrackPlayer, { State, useProgress } from 'react-native-track-player'
+import { Vibration } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import BottomBar from './BottomBar'
 
@@ -43,6 +45,8 @@ import type { CompositeScreenProps } from '@react-navigation/native'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import type { AppTabParamList } from '../../Navigation/AppTabs'
 import type { RootStackParamList } from '../../types'
+import { selectMiniPlayerPlacement } from '../../state/settings'
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 
 export type HomeProps = CompositeScreenProps<BottomTabScreenProps<AppTabParamList, 'Home'>, NativeStackScreenProps<RootStackParamList>> 
 interface DrawerToggleButtonProps {
@@ -94,6 +98,11 @@ const Home = ({ navigation }: HomeProps) => {
     const currentTrack = useAppSelector((state) => state.currentTrack)
     const permission = useAppSelector((state: RootState) => state.permission)
     const dispatch = useAppDispatch()
+    const placement = useAppSelector(selectMiniPlayerPlacement)
+    const insets = useSafeAreaInsets()
+    const tabBarHeight = useBottomTabBarHeight()
+    const hapticsEnabled = useAppSelector((s) => (s as any).settings?.haptics as boolean)
+    const normalizeVolume = useAppSelector((s) => (s as any).settings?.normalizeVolume as boolean)
     const favoriteIds = useAppSelector((s) => (s as any).favorites?.ids as string[] || [])
     const isMiniFavorite = currentTrack ? favoriteIds.includes(String(currentTrack.id)) : false
     let isPlaying = playerState === State.Playing.toString()
@@ -112,7 +121,7 @@ const Home = ({ navigation }: HomeProps) => {
 
     const drawerOptions = useMemo<DrawerOption[]>(() => [
         { id: 'personalize', label: 'personalize', icon: 'star', accentColor: Colors.primary, onPress: () => Alert.alert('Personalize', 'Tailor your dashboard soon!') },
-        { id: 'preferences', label: 'preferences', icon: 'sliders', accentColor: Colors.accent, onPress: () => Alert.alert('Preferences', 'Preferences are coming soon!') },
+        { id: 'preferences', label: 'preferences', icon: 'sliders', accentColor: Colors.accent, onPress: () => navigation.navigate('Preferences') },
         { id: 'playlists', label: 'playlists', icon: 'list', accentColor: Colors.white, onPress: () => navigation.navigate('Playlists') },
         { id: 'equalizer', label: 'equalizer', icon: 'activity', accentColor: Colors.primary, onPress: () => navigation.navigate('Equalizer') },
         { id: 'downloads', label: 'downloads', icon: 'download-cloud', accentColor: Colors.accent, onPress: () => Alert.alert('Downloads', 'Offline downloads coming soon!') },
@@ -153,8 +162,18 @@ const Home = ({ navigation }: HomeProps) => {
     }, [closeDrawer, drawerOpen, openDrawer])
 
     const handleMiniPlayer = useCallback(async () => {
-        isPlaying ? await TrackPlayer.pause() : await TrackPlayer.play()
-    }, [isPlaying])
+        if (hapticsEnabled) {
+            Vibration.vibrate(10)
+        }
+        if (isPlaying) {
+            await TrackPlayer.pause()
+        } else {
+            if (normalizeVolume) {
+                try { await TrackPlayer.setVolume(0.9) } catch {}
+            }
+            await TrackPlayer.play()
+        }
+    }, [hapticsEnabled, isPlaying, normalizeVolume])
 
     const getPlayerState = useCallback(async () => {
         const state = (await TrackPlayer.getState()).toString()
@@ -340,12 +359,8 @@ const Home = ({ navigation }: HomeProps) => {
 
             ) }
 
-            {
-
-                currentTrack?.title
-
-                ?
-                <BottomSection>
+            { currentTrack?.title && placement !== 'mergeWithTabBar' ? (
+                <BottomSection style={{ bottom: placement === 'replaceTabBar' ? insets.bottom + 12 : insets.bottom + Math.max(72, tabBarHeight + 24) }}>
                     <BottomBar>
                         <Animated.View style={{height: '100%', width: animatedWidth, backgroundColor: Colors.background, position: 'absolute', opacity: 0.3}}/>
                         <Pressable style={ styles.playerContainer } onPress={() => navigation.navigate('Player')} onLongPress={() => { if (currentTrack) dispatch(toggleFavorite(String(currentTrack.id))) }}>
@@ -372,8 +387,7 @@ const Home = ({ navigation }: HomeProps) => {
                         </Pressable>
                     </BottomBar>
                 </BottomSection>
-                : null
-            }
+            ) : null }
         </Container>
     )
 }

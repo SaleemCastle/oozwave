@@ -16,6 +16,7 @@ import {
 import { playerQueueListenerMiddleware } from '../state/playerQueue/listener'
 import { favoritesReducer, loadFavoritesFromStorage, favoritesListenerMiddleware } from '../state/favorites'
 import { equalizerReducer, equalizerListenerMiddleware } from '../src/state/equalizer/eqSlice'
+import { settingsReducer, loadSettingsFromStorage } from '../state/settings'
 
 const isDev = typeof __DEV__ !== 'undefined' ? __DEV__ : process.env.NODE_ENV !== 'production'
 
@@ -29,6 +30,7 @@ export const store = configureStore({
         playerQueue: playerQueueReducer,
         favorites: favoritesReducer,
         equalizer: equalizerReducer,
+        settings: settingsReducer,
     },
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware({ immutableCheck: isDev ? { warnAfter: 64, ignoredPaths: ['tracks', 'playerQueue.queue'] } : false, serializableCheck: isDev ? { warnAfter: 64, ignoredPaths: ['tracks', 'playerQueue.queue'] } : false, }).prepend(
@@ -42,6 +44,7 @@ export const store = configureStore({
 store.dispatch(loadPlaylistsFromStorage())
 store.dispatch(loadQueueFromStorage())
 store.dispatch(loadFavoritesFromStorage())
+store.dispatch(loadSettingsFromStorage())
 
 export type RootState = ReturnType<typeof store.getState>
 export type AppDispatch = typeof store.dispatch

@@ -1,10 +1,13 @@
 import React, { useCallback } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
+import { useNavigation } from '@react-navigation/native'
 
 import TabBar from '../Components/TabBar'
 import { Colors } from '../Constants'
 import { Home, Library, Favorites as FavoritesScreen } from '../Screens'
+import { useAppSelector } from '../hooks/reduxHooks'
+import { selectMiniPlayerPlacement } from '../state/settings'
 
 export type AppTabParamList = {
     Home: undefined
@@ -29,9 +32,12 @@ const PlaceholderScreen = (title: string) => {
 const ProfileScreen = PlaceholderScreen('Profile')
 
 const AppTabs: React.FC = () => {
+    const placement = useAppSelector(selectMiniPlayerPlacement)
+    const hasTrack = useAppSelector((s) => Boolean((s as any).currentTrack?.title))
+    const navigation = useNavigation<any>()
     const handleNowPlayingPress = useCallback(() => {
-        // Hook into global player modal or navigation when ready.
-    }, [])
+        navigation.navigate('Player')
+    }, [navigation])
 
     return (
         <Tab.Navigator
@@ -41,11 +47,15 @@ const AppTabs: React.FC = () => {
                 tabBarHideOnKeyboard: true,
             }}
             tabBar={ (props) => (
-                <TabBar
-                    { ...props }
-                    showNowPlaying={ false }
-                    onNowPlayingPress={ handleNowPlayingPress }
-                />
+                placement === 'replaceTabBar'
+                    ? null as unknown as React.ReactNode
+                    : (
+                        <TabBar
+                            { ...props }
+                            showNowPlaying={ placement === 'mergeWithTabBar' && hasTrack }
+                            onNowPlayingPress={ handleNowPlayingPress }
+                        />
+                    )
             ) }
         >
             <Tab.Screen
