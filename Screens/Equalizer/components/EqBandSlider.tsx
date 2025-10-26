@@ -3,6 +3,7 @@ import { AccessibilityActionEvent, AccessibilityActionInfo, View } from 'react-n
 import { PanGestureHandler, PanGestureHandlerGestureEvent } from 'react-native-gesture-handler'
 import Animated, { useAnimatedGestureHandler, useAnimatedStyle, useSharedValue, withTiming, runOnJS } from 'react-native-reanimated'
 import { colors as themeColors } from '../../../theme/tokens'
+import { Colors } from '../../../Constants'
 
 type Props = {
   index: number
@@ -24,9 +25,10 @@ type Props = {
 const KNOB_SIZE = 18
 
 const EqBandSlider: React.FC<Props> = ({ value, min, max, onChange, onRelease, label, disabled, active, onActiveChange, height = 220, reducedMotion }) => {
-  const trackHeight = height
+  const trackHeight = Number.isFinite(height) && height > 0 ? height : 220
   const range = max - min
-  const progress = useSharedValue((value - min) / range)
+  const initialP = Number.isFinite(value) ? ((value - min) / range) : 0
+  const progress = useSharedValue(initialP < 0 ? 0 : initialP > 1 ? 1 : initialP)
   const isActive = useSharedValue(false)
 
   const toValue = (p: number) => {
@@ -34,7 +36,9 @@ const EqBandSlider: React.FC<Props> = ({ value, min, max, onChange, onRelease, l
     return raw < min ? min : (raw > max ? max : raw)
   }
   const toProgress = (val: number) => {
+    if (!Number.isFinite(val)) return 0
     const raw = (val - min) / range
+    if (!Number.isFinite(raw)) return 0
     return raw < 0 ? 0 : (raw > 1 ? 1 : raw)
   }
 
@@ -76,7 +80,9 @@ const EqBandSlider: React.FC<Props> = ({ value, min, max, onChange, onRelease, l
   })
 
   const knobStyle = useAnimatedStyle(() => {
-    const y = (1 - progress.value) * trackHeight - KNOB_SIZE / 2
+    const p = isNaN(progress.value as number) ? 0 : progress.value
+    const h = isNaN(trackHeight as number) ? 220 : trackHeight
+    const y = (1 - p) * h - KNOB_SIZE / 2
     const scale = reducedMotion ? 1 : withTiming(isActive.value ? 1.08 : 1, { duration: 160 })
     return {
       transform: [{ translateY: y }, { scale }],
@@ -86,7 +92,6 @@ const EqBandSlider: React.FC<Props> = ({ value, min, max, onChange, onRelease, l
 
   const valueChipStyle = useAnimatedStyle(() => ({
     opacity: reducedMotion ? (isActive.value ? 1 : 0) : withTiming(isActive.value ? 1 : 0, { duration: 200 }),
-    transform: [{ translateY: (1 - progress.value) * trackHeight - KNOB_SIZE - 18 }],
   }))
 
   const accessibilityActions: ReadonlyArray<AccessibilityActionInfo> = React.useMemo(() => ([
@@ -97,9 +102,9 @@ const EqBandSlider: React.FC<Props> = ({ value, min, max, onChange, onRelease, l
   const onAccessibilityAction = (e: AccessibilityActionEvent) => {
     const step = 0.5
     let next = value
-    if (e.nativeEvent.actionName === 'increment') next = clamp(value + step, min, max)
-    if (e.nativeEvent.actionName === 'decrement') next = clamp(value - step, min, max)
-    onChange(snapNearZero(next))
+    if (e.nativeEvent.actionName === 'increment') next = Math.min(max, Math.max(min, value + step))
+    if (e.nativeEvent.actionName === 'decrement') next = Math.min(max, Math.max(min, value - step))
+    onChange(Math.abs(next) < 0.25 ? 0 : next)
     onRelease?.()
   }
 
@@ -109,7 +114,7 @@ const EqBandSlider: React.FC<Props> = ({ value, min, max, onChange, onRelease, l
         accessible
         accessibilityRole="adjustable"
         accessibilityLabel={`Band ${label}`}
-        accessibilityValue={{ now: Math.round(value * 10) / 10 }}
+        accessibilityValue={{ now: Number.isFinite(value) ? Math.round(value * 10) / 10 : 0 }}
         accessibilityActions={accessibilityActions}
         onAccessibilityAction={onAccessibilityAction}
         style={{ width: 40, alignItems: 'center', paddingHorizontal: active ? 6 : 0 }}
@@ -118,10 +123,10 @@ const EqBandSlider: React.FC<Props> = ({ value, min, max, onChange, onRelease, l
         <Animated.View style={[{
           position: 'absolute',
           width: KNOB_SIZE, height: KNOB_SIZE, borderRadius: KNOB_SIZE / 2,
-          borderWidth: 2, borderColor: '#FFF', backgroundColor: 'rgba(255,255,255,0.1)',
+          borderWidth: 4, borderColor: '#FFF', backgroundColor: Colors.background,
           shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 3, shadowOffset: { width: 0, height: 1 },
         }, knobStyle]} />
-        <Animated.View style={[{ position: 'absolute', top: -22, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: 'transparent' }, valueChipStyle]}>
+        <Animated.View style={[{ position: 'absolute', top: -22, left: 0, right: 0, alignItems: 'center', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: 'transparent' }, valueChipStyle]}>
           <Animated.Text style={{ color: themeColors.neonMagenta, fontSize: 10 }}>{`${value > 0 ? '+' : ''}${value.toFixed(1)}`}</Animated.Text>
         </Animated.View>
         <View style={{ marginTop: 10 }}>

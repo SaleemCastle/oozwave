@@ -107,7 +107,10 @@ const EqualizerScreen: React.FC = () => {
         {bandsToShow.map((_, i) => (
           <GridLine key={`v-${i}`} style={{ left: `${(i+0.5) * (100 / bandsToShow.length)}%` }} />
         ))}
+        {/* Horizontal guides: 0 dB (magenta) + mid-lines */}
         <ZeroLine />
+        <ExtraHLine style={{ top: '25%' }} />
+        <ExtraHLine style={{ top: '75%' }} />
         <BandsRow>
           {bandsToShow.map((f, i) => (
             <EqBandSlider
@@ -214,7 +217,7 @@ const GridLine = styled.View`
   position: absolute;
   width: 1px;
   top: 0; bottom: 0;
-  background-color: rgba(255,255,255,0.08);
+  background-color: rgba(255,255,255,0.06);
 `
 
 const ZeroLine = styled.View`
@@ -222,7 +225,7 @@ const ZeroLine = styled.View`
   left: 0; right: 0;
   top: 50%;
   height: 1px;
-  background-color: rgba(255,255,255,0.2);
+  background-color: rgba(255,0,200,0.25);
 `
 
 const BandsRow = styled.View`
@@ -236,6 +239,13 @@ const GridArea = styled.View`
   height: 260px;
   position: relative;
   justify-content: flex-end;
+`
+
+const ExtraHLine = styled.View`
+  position: absolute;
+  left: 0; right: 0;
+  height: 1px;
+  background-color: rgba(255,255,255,0.08);
 `
 
 const Section = styled.View`
