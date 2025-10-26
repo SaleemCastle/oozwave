@@ -234,7 +234,7 @@ const Discover: React.FC<Props> = ({ navigation }) => {
           </RowHeader>
           <FlatList
             data={loading ? Array.from({ length: 8 }).map((_, i) => ({ id: `sk_${i}` })) : artists}
-            keyExtractor={(a) => a.artist}
+            keyExtractor={(a) => a.id}
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: 24, paddingVertical: 8 }}
@@ -265,7 +265,7 @@ const Discover: React.FC<Props> = ({ navigation }) => {
           </RowHeader>
           <FlatList
             data={loading ? Array.from({ length: 8 }).map((_, i) => ({ id: `sk_${i}` })) : albums}
-            keyExtractor={(a) => a.album}
+            keyExtractor={(a) => a.id}
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: 24, paddingVertical: 8 }}
@@ -406,7 +406,7 @@ const TrendingCardBase: React.FC<{ item: any; cover?: any; onPress: () => void }
 }
 const TrendingCard = React.memo(TrendingCardBase, (prev, next) => prev.item?.id === next.item?.id && prev.cover === next.cover)
 
-const RevealCardBase: React.FC<{ cover: any; title: string; subtitle?: string; actions: { icon: 'play'|'shuffle'|'plus' }[]; onPress: () => void }> = ({ cover, title, subtitle, actions, onPress }) => {
+const RevealCardBase: React.FC<{ cover: any; title: string; subtitle?: string; actions: { icon: 'play'|'shuffle'|'plus', label: string }[]; onPress: () => void }> = ({ cover, title, subtitle, actions, onPress }) => {
   const overlayOpacity = useRef(new Animated.Value(0)).current
   const reveal = () => Animated.timing(overlayOpacity, { toValue: 1, duration: 160, useNativeDriver: true }).start()
   const hide = () => Animated.timing(overlayOpacity, { toValue: 0, duration: 200, useNativeDriver: true }).start()

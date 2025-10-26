@@ -114,7 +114,7 @@ const Home = ({ navigation }: HomeProps) => {
         { id: 'personalize', label: 'personalize', icon: 'star', accentColor: Colors.primary, onPress: () => Alert.alert('Personalize', 'Tailor your dashboard soon!') },
         { id: 'preferences', label: 'preferences', icon: 'sliders', accentColor: Colors.accent, onPress: () => Alert.alert('Preferences', 'Preferences are coming soon!') },
         { id: 'playlists', label: 'playlists', icon: 'list', accentColor: Colors.white, onPress: () => navigation.navigate('Playlists') },
-        { id: 'equalizer', label: 'equalizer', icon: 'activity', accentColor: Colors.primary, onPress: () => Alert.alert('Equalizer', 'Fine-tune audio coming soon!') },
+        { id: 'equalizer', label: 'equalizer', icon: 'activity', accentColor: Colors.primary, onPress: () => navigation.navigate('Equalizer') },
         { id: 'downloads', label: 'downloads', icon: 'download-cloud', accentColor: Colors.accent, onPress: () => Alert.alert('Downloads', 'Offline downloads coming soon!') },
         { id: 'support', label: 'support', icon: 'message-circle', accentColor: Colors.white, onPress: () => Alert.alert('Support', 'We\'re here to help!') },
     ], [])

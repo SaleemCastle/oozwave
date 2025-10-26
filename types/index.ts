@@ -12,7 +12,8 @@ export type RootStackParamList = {
     Library: undefined
     Player: undefined
     Billboards: { info: IBillboardProps }
-    Discover: undefined
+    Discover: undefined,
+    Equalizer: undefined,
     DiscoverSection: { kind: 'recommended' | 'trending' | 'artists' | 'albums' | 'playlists' | 'creators' | 'releases' | 'genres'; title: string }
     Playlists: undefined
     PlaylistDetail: { playlistId: string }

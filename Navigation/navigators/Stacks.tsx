@@ -6,9 +6,11 @@ import {
     Onboarding,
     Player,
     Billboards,
+    Discover,
     PlaylistsScreen,
     PlaylistDetailScreen,
     PlaylistEditorModal,
+    Equalizer
 } from '../../Screens'
 import AppTabs from '../AppTabs'
 import { RootStackParamList } from '../../types'
@@ -44,7 +46,14 @@ const Stacks = (props: IProps) => (
         />
         <Stack.Screen
             name='Discover'
-            component={ require('../../Screens/Discover').default }
+            component={ Discover }
+            options={{
+                headerShown: false,
+            }}
+        />
+        <Stack.Screen
+            name='Equalizer'
+            component={ Equalizer }
             options={{
                 headerShown: false,
             }}
