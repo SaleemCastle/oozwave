@@ -3,6 +3,8 @@ import { Alert, FlatList, Pressable, TextInput, View } from 'react-native'
 import styled from 'styled-components/native'
 
 import { Colors, Images } from '../../Constants'
+import { useColorScheme } from 'react-native'
+import { selectSettings } from '../../state/settings'
 import { McText, McVectorIcon, NeonButton } from '../../Components'
 import { useAppDispatch, useAppSelector } from '../../hooks/reduxHooks'
 import { selectFavoriteTracks, toggleFavorite } from '../../state/favorites'
@@ -16,6 +18,11 @@ const Favorites: React.FC = () => {
   const favorites = useAppSelector(selectFavoriteTracks)
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<'recent' | 'alpha' | 'artist'>('recent')
+
+  const { theme } = useAppSelector(selectSettings)
+  const scheme = useColorScheme()
+  const isDark = theme === 'system' ? scheme === 'dark' : theme === 'dark'
+  const containerBg = isDark ? Colors.background : Colors.white
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -93,7 +100,7 @@ const Favorites: React.FC = () => {
   )
 
   return (
-    <Container>
+    <Container bg={containerBg}>
       <FlatList
         data={filtered}
         keyExtractor={(t) => String(t.id)}
@@ -106,9 +113,9 @@ const Favorites: React.FC = () => {
   )
 }
 
-const Container = styled.SafeAreaView`
+const Container = styled.SafeAreaView<{ bg: string }>`
   flex: 1;
-  background-color: ${Colors.background};
+  background-color: ${props => props.bg};
 `
 
 const HeaderRow = styled.View`

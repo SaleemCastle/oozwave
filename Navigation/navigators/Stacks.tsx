@@ -63,8 +63,7 @@ const Stacks = (props: IProps) => (
             name='Preferences'
             component={ Preferences }
             options={{
-                headerShown: true,
-                title: 'Preferences',
+                headerShown: false,
             }}
         />
         <Stack.Screen

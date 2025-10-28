@@ -7,6 +7,7 @@ import { useAppDispatch, useAppSelector } from '../../hooks/reduxHooks'
 import {
   selectSettings,
   setMiniPlayerPlacement,
+  setMiniPlayerTabSlot,
   setAutoplayNext,
   setWifiOnlyDownloads,
   setAudioQuality,
@@ -21,6 +22,7 @@ import {
 } from '../../state/settings'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import type { RootStackParamList } from '../../types'
+import { colors } from '../../theme/tokens'
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Preferences'>
 
@@ -96,6 +98,9 @@ const Preferences: React.FC<Props> = () => {
 
   return (
     <Container>
+      <Header>
+        <McText extra size={22} color={colors.neonMagenta}>Preferences</McText>
+      </Header>
       <SectionHeader medium size={16} color={ Colors.grey3 }>Mini Player Placement</SectionHeader>
       <Row>
         <RadioOption label="Above tab bar" selected={ settings.miniPlayerPlacement === 'aboveTabBar' } onPress={ () => setPlacement('aboveTabBar') } />
@@ -106,6 +111,16 @@ const Preferences: React.FC<Props> = () => {
       <Row>
         <RadioOption label="Replace tab bar" selected={ settings.miniPlayerPlacement === 'replaceTabBar' } onPress={ () => setPlacement('replaceTabBar') } />
       </Row>
+
+      { settings.miniPlayerPlacement === 'mergeWithTabBar' && (
+        <>
+          <SectionHeader medium size={16} color={ Colors.grey3 }>Mini Player Tab Slot</SectionHeader>
+          <Row>
+            <RadioOption label="Current tab" selected={ settings.miniPlayerTabSlot === 'currentTab' } onPress={ () => { dispatch(setMiniPlayerTabSlot('currentTab')); dispatch(persistSettingsToStorage()) } } />
+            <RadioOption label="Home tab" selected={ settings.miniPlayerTabSlot === 'homeTab' } onPress={ () => { dispatch(setMiniPlayerTabSlot('homeTab')); dispatch(persistSettingsToStorage()) } } />
+          </Row>
+        </>
+      ) }
 
       <SectionHeader medium size={16} color={ Colors.grey3 }>Playback</SectionHeader>
       <Row>
@@ -172,6 +187,9 @@ const Preferences: React.FC<Props> = () => {
 const Container = styled.ScrollView`
   flex: 1;
   background-color: ${Colors.background};
+`
+const Header = styled.View`
+  margin: 16px 24px 18px;
 `
 
 const styles = StyleSheet.create({

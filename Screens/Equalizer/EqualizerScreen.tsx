@@ -199,8 +199,7 @@ const Container = styled.SafeAreaView`
 `
 
 const Header = styled.View`
-  margin: 16px 24px 8px;
-  align-items: center;
+  margin: 16px 24px 18px;
 `
 
 const Row = styled.View`

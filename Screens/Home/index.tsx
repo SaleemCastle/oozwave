@@ -12,6 +12,7 @@ import {
     Easing,
     StyleSheet, 
 } from 'react-native'
+import { useColorScheme } from 'react-native'
 import styled from 'styled-components/native'
 import { CoverImage } from 'react-native-get-music-files-v3dev-test'
 import TrackPlayer, { State, useProgress } from 'react-native-track-player'
@@ -45,7 +46,7 @@ import type { CompositeScreenProps } from '@react-navigation/native'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import type { AppTabParamList } from '../../Navigation/AppTabs'
 import type { RootStackParamList } from '../../types'
-import { selectMiniPlayerPlacement } from '../../state/settings'
+import { selectMiniPlayerPlacement, selectSettings } from '../../state/settings'
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 
 export type HomeProps = CompositeScreenProps<BottomTabScreenProps<AppTabParamList, 'Home'>, NativeStackScreenProps<RootStackParamList>> 
@@ -99,10 +100,14 @@ const Home = ({ navigation }: HomeProps) => {
     const permission = useAppSelector((state: RootState) => state.permission)
     const dispatch = useAppDispatch()
     const placement = useAppSelector(selectMiniPlayerPlacement)
+    const { theme } = useAppSelector(selectSettings)
     const insets = useSafeAreaInsets()
     const tabBarHeight = useBottomTabBarHeight()
     const hapticsEnabled = useAppSelector((s) => (s as any).settings?.haptics as boolean)
     const normalizeVolume = useAppSelector((s) => (s as any).settings?.normalizeVolume as boolean)
+    const scheme = useColorScheme()
+    const isDark = theme === 'system' ? scheme === 'dark' : theme === 'dark'
+    const containerBg = isDark ? Colors.background : Colors.white
     const favoriteIds = useAppSelector((s) => (s as any).favorites?.ids as string[] || [])
     const isMiniFavorite = currentTrack ? favoriteIds.includes(String(currentTrack.id)) : false
     let isPlaying = playerState === State.Playing.toString()
@@ -265,7 +270,7 @@ const Home = ({ navigation }: HomeProps) => {
     ]
 
     return (
-        <Container>
+        <Container bg={ containerBg }>
             <ScrollView showsVerticalScrollIndicator={ false }>
 
                 <StatusBar hidden />
@@ -388,7 +393,7 @@ const Home = ({ navigation }: HomeProps) => {
                     </BottomBar>
                 </BottomSection>
             ) : null }
-        </Container>
+        </Container> 
     )
 }
 
@@ -415,9 +420,9 @@ const HeaderRow = styled.View`
     margin: 12px ${Metrics.padding}px 0;
 `;
 
-const Container = styled.SafeAreaView`
+const Container = styled.SafeAreaView<{ bg: string}>`
     flex: 1;
-    background-color: ${Colors.background};
+    background-color: ${props => props.bg};
 `
 
 const SearchSection = styled.View`

@@ -1,18 +1,28 @@
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
     AccessibilityInfo,
-    Animated,
+    Animated as RNAnimated,
     Platform,
     Pressable,
     StyleSheet,
     View,
 } from 'react-native'
+import Reanimated, {
+    useSharedValue,
+    useAnimatedProps,
+    withTiming,
+    Easing as REEasing,
+    interpolate as rInterpolate,
+} from 'react-native-reanimated'
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs'
-import LinearGradient from 'react-native-linear-gradient'
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons'
+import Svg, { Circle } from 'react-native-svg'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import tokens from '../theme/tokens'
+import TrackPlayer, { State as TPState, useProgress } from 'react-native-track-player'
+import { useAppSelector } from '../hooks/reduxHooks'
+import { Vibration } from 'react-native'
 
 const { colors, radii, shadows } = tokens
 
@@ -84,7 +94,7 @@ const TabItem = memo<TabItemProps>(({
     testID,
     prefersReducedMotion,
 }) => {
-    const scale = useRef(new Animated.Value(focused ? 1.08 : 1)).current
+    const scale = useRef(new RNAnimated.Value(focused ? 1.08 : 1)).current
 
     useEffect(() => {
         if (prefersReducedMotion) {
@@ -92,7 +102,7 @@ const TabItem = memo<TabItemProps>(({
             return
         }
 
-        Animated.timing(scale, {
+        RNAnimated.timing(scale, {
             toValue: focused ? 1.08 : 1,
             duration: 180,
             useNativeDriver: true,
@@ -112,7 +122,7 @@ const TabItem = memo<TabItemProps>(({
             testID={ testID }
             style={ styles.tabPressable }
         >
-            <Animated.View
+            <RNAnimated.View
                 style={ [
                     styles.iconWrapper,
                     focused && styles.iconWrapperActive,
@@ -124,7 +134,7 @@ const TabItem = memo<TabItemProps>(({
                     <View style={ styles.iconGlow } />
                 ) }
                 <Icon name={ iconName } size={ 24 } color={ iconColor } />
-            </Animated.View>
+            </RNAnimated.View>
         </Pressable>
     )
 }, (prev, next) => (
@@ -133,6 +143,88 @@ const TabItem = memo<TabItemProps>(({
     prev.iconName === next.iconName &&
     prev.prefersReducedMotion === next.prefersReducedMotion
 ))
+
+// Compact mini player that fits a tab slot (top-level)
+const MiniTabPlayer: React.FC<{ onOpenPlayer?: () => void }> = ({ onOpenPlayer }) => {
+    const currentTrack = useAppSelector((s) => (s as any).currentTrack)
+    const playerState = useAppSelector((s) => (s as any).currentPlayerState?.playerState as string | undefined)
+    const haptics = useAppSelector((s) => (s as any).settings?.haptics as boolean)
+    const isPlaying = playerState === TPState.Playing.toString()
+    const { position, duration } = useProgress(0.1)
+
+    const onToggle = useCallback(async () => {
+        if (haptics) Vibration.vibrate(10)
+        try {
+            if (isPlaying) {
+                await TrackPlayer.pause()
+            } else {
+                await TrackPlayer.play()
+            }
+        } catch {}
+    }, [haptics, isPlaying])
+
+    const iconColor = isPlaying ? colors.neonMagenta : colors.lavenderFog
+
+    const pct = duration > 0 ? Math.max(0, Math.min(1, position / duration)) : 0
+    const AnimatedCircle = useRef(Reanimated.createAnimatedComponent(Circle)).current
+
+    const size = 44
+    const stroke = 3
+    const r = (size - stroke) / 2
+    const cx = size / 2
+    const cy = size / 2
+    const circumference = 2 * Math.PI * r
+    const progressSV = useSharedValue(pct)
+
+    useEffect(() => {
+        progressSV.value = withTiming(pct, { duration: 140, easing: REEasing.linear })
+    }, [pct, progressSV])
+
+    const circleProps = useAnimatedProps(() => ({
+        strokeDashoffset: rInterpolate(progressSV.value, [0, 1], [circumference, 0]),
+    }))
+
+    return (
+        <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={ isPlaying ? 'Pause' : 'Play' }
+            onPress={ onToggle }
+            onLongPress={ onOpenPlayer }
+            hitSlop={ 12 }
+            style={ styles.tabPressable }
+        >
+            <View style={ styles.ringWrapper }>
+                <Svg width={ size } height={ size } style={ styles.ringSvg }>
+                    <Circle
+                        cx={ cx }
+                        cy={ cy }
+                        r={ r }
+                        stroke={'rgba(255, 0, 200, 0.25)'}
+                        strokeWidth={ stroke }
+                        fill={'transparent'}
+                    />
+                    <AnimatedCircle
+                        cx={ cx }
+                        cy={ cy }
+                        r={ r }
+                        stroke={ colors.neonMagenta }
+                        strokeWidth={ stroke }
+                        strokeLinecap={'round'}
+                        fill={'transparent'}
+                        strokeDasharray={ `${circumference}, ${circumference}` }
+                        animatedProps={ circleProps as any }
+                        transform={`rotate(-90 ${cx} ${cy})`}
+                    />
+                </Svg>
+                <View style={ styles.iconCenter }>
+                    <View style={[styles.iconWrapper, isPlaying && styles.iconWrapperActive]}>
+                        <Icon name={ isPlaying ? 'pause' : 'play' } size={ 22 } color={ iconColor } />
+                    </View>
+                </View>
+            </View>
+        </Pressable>
+    )
+}
 
 const TabBar: React.FC<CustomTabBarProps> = ({
     state,
@@ -167,6 +259,10 @@ const TabBar: React.FC<CustomTabBarProps> = ({
     }, [navigation])
 
     const routes = useMemo(() => state.routes, [state.routes])
+    const focusedIndex = state.index
+    const miniSlot = useAppSelector((s) => (s as any).settings?.miniPlayerTabSlot as 'currentTab' | 'homeTab')
+    const homeIndex = routes.findIndex((r) => r.name === 'Home')
+    const hasTrack = useAppSelector((s) => Boolean((s as any).currentTrack?.title))
 
     return (
         <View pointerEvents="box-none" style={ styles.absoluteWrapper }>
@@ -202,6 +298,13 @@ const TabBar: React.FC<CustomTabBarProps> = ({
                         const label = labelFromOptions
                         const iconName = ICONS[route.name] ?? 'circle'
 
+                        const targetIndex = miniSlot === 'homeTab' && homeIndex >= 0 ? homeIndex : focusedIndex
+                        if (showNowPlaying && hasTrack && index === targetIndex) {
+                            return (
+                                <MiniTabPlayer key={ route.key } onOpenPlayer={ onNowPlayingPress } />
+                            )
+                        }
+
                         return (
                             <TabItem
                                 key={ route.key }
@@ -218,27 +321,6 @@ const TabBar: React.FC<CustomTabBarProps> = ({
                     }) }
                 </View>
 
-                { showNowPlaying && (
-                    <View pointerEvents="box-none" style={ styles.nowPlayingWrapper }>
-                        <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel="Open now playing"
-                            hitSlop={ 14 }
-                            onPress={ onNowPlayingPress }
-                            style={ styles.nowPlayingPressable }
-                        >
-                            <LinearGradient
-                                colors={[colors.cyanPulse, colors.neonMagenta]}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 1 }}
-                                style={ styles.nowPlayingGradient }
-                            >
-                                <Icon name="play" size={ 20 } color={ colors.pureWhite } />
-                            </LinearGradient>
-                            <View style={ styles.nowPlayingHalo } />
-                        </Pressable>
-                    </View>
-                ) }
             </View>
         </View>
     )
@@ -308,34 +390,25 @@ const styles = StyleSheet.create({
     translucentFallback: {
         backgroundColor: colors.midnightOverlay,
     },
-    nowPlayingWrapper: {
+    ringWrapper: {
+        width: 44,
+        height: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+    },
+    ringSvg: {
         position: 'absolute',
-        top: -26,
+        top: 0,
+        left: 0,
+    },
+    iconCenter: {
+        position: 'absolute',
+        top: 0,
         left: 0,
         right: 0,
+        bottom: 0,
         alignItems: 'center',
         justifyContent: 'center',
-        pointerEvents: 'box-none',
-    },
-    nowPlayingPressable: {
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    nowPlayingGradient: {
-        width: 58,
-        height: 58,
-        borderRadius: 29,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.25)',
-    },
-    nowPlayingHalo: {
-        position: 'absolute',
-        width: 84,
-        height: 84,
-        borderRadius: 42,
-        backgroundColor: 'rgba(0, 224, 255, 0.18)',
-        zIndex: -1,
-    },
+    }
 })

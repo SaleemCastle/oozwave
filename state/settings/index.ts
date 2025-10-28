@@ -3,10 +3,12 @@ import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit'
 import type { RootState } from '../../Store/store'
 
 export type MiniPlayerPlacement = 'aboveTabBar' | 'mergeWithTabBar' | 'replaceTabBar'
+export type MiniPlayerTabSlot = 'currentTab' | 'homeTab'
 
 type SettingsState = {
   isInitialized: boolean
   miniPlayerPlacement: MiniPlayerPlacement
+  miniPlayerTabSlot: MiniPlayerTabSlot
   autoplayNext: boolean
   wifiOnlyDownloads: boolean
   audioQuality: 'auto' | 'low' | 'normal' | 'high'
@@ -24,6 +26,7 @@ const STORAGE_KEY = '@app/settings:v1'
 const initialState: SettingsState = {
   isInitialized: false,
   miniPlayerPlacement: 'aboveTabBar',
+  miniPlayerTabSlot: 'currentTab',
   autoplayNext: true,
   wifiOnlyDownloads: true,
   audioQuality: 'auto',
@@ -80,6 +83,9 @@ const settingsSlice = createSlice({
     setMiniPlayerPlacement(state, action: PayloadAction<MiniPlayerPlacement>) {
       state.miniPlayerPlacement = action.payload
     },
+    setMiniPlayerTabSlot(state, action: PayloadAction<MiniPlayerTabSlot>) {
+      state.miniPlayerTabSlot = action.payload
+    },
     setAutoplayNext(state, action: PayloadAction<boolean>) {
       state.autoplayNext = action.payload
     },
@@ -117,6 +123,7 @@ export const {
   markInitialized,
   hydrate,
   setMiniPlayerPlacement,
+  setMiniPlayerTabSlot,
   setAutoplayNext,
   setWifiOnlyDownloads,
   setAudioQuality,

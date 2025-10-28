@@ -13,6 +13,7 @@ import {
   StyleSheet,
 } from 'react-native'
 import styled from 'styled-components/native'
+import { useColorScheme } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { CoverImage } from 'react-native-get-music-files-v3dev-test'
 
@@ -26,6 +27,7 @@ import { colors as themeColors } from '../../theme/tokens'
 import { playTracksNow } from '../../state/playerQueue'
 import { toggleFavorite } from '../../state/favorites'
 import { trackToQueueItem } from '../../state/playerQueue/utils'
+import { selectSettings } from '../../state/settings'
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true)
@@ -509,8 +511,13 @@ const Library: React.FC<LibraryProps> = ({ navigation }) => {
     </View>
   )
 
+  const { theme } = useAppSelector(selectSettings)
+  const scheme = useColorScheme()
+  const isDark = theme === 'system' ? scheme === 'dark' : theme === 'dark'
+  const containerBg = isDark ? Colors.background : Colors.white
+
   return (
-    <Container>
+    <Container bg={containerBg}>
       <StatusBar hidden />
       {section === 'Playlists' && (
         <FlatList
@@ -633,9 +640,9 @@ const Library: React.FC<LibraryProps> = ({ navigation }) => {
   )
 }
 
-const Container = styled.SafeAreaView`
+const Container = styled.SafeAreaView<{ bg: string }>`
   flex: 1;
-  background-color: ${Colors.background};
+  background-color: ${props => props.bg};
 `
 
 const HeaderRow = styled.View`
