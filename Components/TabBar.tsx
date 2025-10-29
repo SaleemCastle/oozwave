@@ -7,13 +7,7 @@ import {
     StyleSheet,
     View,
 } from 'react-native'
-import Reanimated, {
-    useSharedValue,
-    useAnimatedProps,
-    withTiming,
-    Easing as REEasing,
-    interpolate as rInterpolate,
-} from 'react-native-reanimated'
+// Note: Simplified (no Reanimated) for arc to avoid Hermes issues
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs'
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons'
 import Svg, { Circle } from 'react-native-svg'
@@ -166,7 +160,7 @@ const MiniTabPlayer: React.FC<{ onOpenPlayer?: () => void }> = ({ onOpenPlayer }
     const iconColor = isPlaying ? colors.neonMagenta : colors.lavenderFog
 
     const pct = duration > 0 ? Math.max(0, Math.min(1, position / duration)) : 0
-    const AnimatedCircle = useRef(Reanimated.createAnimatedComponent(Circle)).current
+    
 
     const size = 44
     const stroke = 3
@@ -174,16 +168,8 @@ const MiniTabPlayer: React.FC<{ onOpenPlayer?: () => void }> = ({ onOpenPlayer }
     const cx = size / 2
     const cy = size / 2
     const circumference = 2 * Math.PI * r
-    const progressSV = useSharedValue(pct)
 
-    useEffect(() => {
-        progressSV.value = withTiming(pct, { duration: 140, easing: REEasing.linear })
-    }, [pct, progressSV])
-
-    const circleProps = useAnimatedProps(() => ({
-        strokeDashoffset: rInterpolate(progressSV.value, [0, 1], [circumference, 0]),
-    }))
-
+    
     return (
         <Pressable
             accessibilityRole="button"
@@ -203,7 +189,7 @@ const MiniTabPlayer: React.FC<{ onOpenPlayer?: () => void }> = ({ onOpenPlayer }
                         strokeWidth={ stroke }
                         fill={'transparent'}
                     />
-                    <AnimatedCircle
+                    <Circle
                         cx={ cx }
                         cy={ cy }
                         r={ r }
@@ -212,7 +198,7 @@ const MiniTabPlayer: React.FC<{ onOpenPlayer?: () => void }> = ({ onOpenPlayer }
                         strokeLinecap={'round'}
                         fill={'transparent'}
                         strokeDasharray={ `${circumference}, ${circumference}` }
-                        animatedProps={ circleProps as any }
+                        strokeDashoffset={ circumference - (pct * circumference) }
                         transform={`rotate(-90 ${cx} ${cy})`}
                     />
                 </Svg>

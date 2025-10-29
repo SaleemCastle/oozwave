@@ -41,7 +41,7 @@ const PlaylistHeroCard: React.FC<Props> = ({ title, subtitle, description, accen
               <LinearGradient colors={[accent, 'transparent']} style={{ ...StyleSheetAbsoluteFill, opacity: 0.08 }} />
             </Montage>
           )}
-          <InnerCard>
+          <InnerCard style={ shadows?.neonPill }>
             <Row>
               <Avatar borderColor={accent}>
                 {emoji ? (
@@ -91,7 +91,6 @@ const InnerCard = styled.View`
   background-color: rgba(16, 0, 32, 0.85);
   border-radius: 16px;
   padding: 14px;
-  ${shadows?.neonPill ? shadows.neonPill : ''}
 `
 
 const Row = styled.View`

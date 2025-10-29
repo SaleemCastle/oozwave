@@ -294,7 +294,7 @@ const PlaylistsScreen: React.FC = () => {
     return (
         <View style={ styles.screen }>
             <View style={ styles.header }>
-                <McText extra size={28} color={colors.neonMagenta}>Playlists</McText>
+                <McText extra size={22} color={colors.neonMagenta}>Playlists</McText>
                 <View style={ styles.headerActions }>
                     <Pressable
                         accessibilityRole='button'
@@ -303,7 +303,7 @@ const PlaylistsScreen: React.FC = () => {
                         style={ styles.headerIconButton }
                         hitSlop={ 12 }
                     >
-                        <Icon name='download' size={ 18 } color={ colors.neonMagenta } />
+                        <Icon name='download' size={ 16 } color={ colors.neonMagenta } />
                     </Pressable>
                     <Pressable
                         accessibilityRole='button'
@@ -312,7 +312,7 @@ const PlaylistsScreen: React.FC = () => {
                         style={ styles.headerIconButton }
                         hitSlop={ 12 }
                     >
-                        <Icon name='share-2' size={ 18 } color={ colors.neonMagenta } />
+                        <Icon name='share-2' size={ 16 } color={ colors.neonMagenta } />
                     </Pressable>
                 </View>
             </View>
@@ -334,7 +334,7 @@ const PlaylistsScreen: React.FC = () => {
                     hitSlop={ 12 }
                     style={ styles.sortPill }
                 >
-                    <McText semi style={ styles.sortText }>{ SORT_OPTIONS.find((option) => option.value === sortBy)?.label ?? 'Sort' }</McText>
+                    <McText regular style={ styles.sortText }>{ SORT_OPTIONS.find((option) => option.value === sortBy)?.label ?? 'Sort' }</McText>
                     <Icon name='chevron-down' size={ 16 } color={ colors.pureWhite } />
                 </Pressable>
             </View>
@@ -582,8 +582,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     headerIconButton: {
-        width: 40,
-        height: 40,
+        width: 32,
+        height: 32,
         borderRadius: 20,
         borderWidth: 1,
         borderColor: colors.neonMagenta,
@@ -607,7 +607,6 @@ const styles = StyleSheet.create({
         marginHorizontal: 12,
         paddingVertical: 12,
         color: colors.grey5,
-        fontWeight: '800'
     },
     sortPill: {
         flexDirection: 'row',
@@ -622,6 +621,7 @@ const styles = StyleSheet.create({
     sortText: {
         color: colors.pureWhite,
         marginRight: 6,
+        fontSize:14
     },
     list: {
         paddingHorizontal: 24,

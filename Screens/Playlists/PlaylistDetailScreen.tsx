@@ -32,8 +32,8 @@ import {
     startPlaylistPlayback,
     enqueuePlayNext,
     enqueueToQueue,
-    toggleShuffle,
     selectPlaybackMeta,
+    setShuffle,
 } from '../../state/playerQueue'
 import { useAppDispatch, useAppSelector } from '../../hooks/reduxHooks'
 import { PlaylistsStackParamList } from '../../types'
@@ -305,7 +305,21 @@ const PlaylistDetailScreen: React.FC = () => {
                                 <Icon name='play' size={16} color={ colors.pureWhite } />
                                 <McText medium size={12} color={ colors.pureWhite } style={{ marginLeft: 6 }}>Play</McText>
                             </ActionPill>
-                            <ActionPill onPress={ () => { if (!tracks.length) return; if (!playbackMeta?.isShuffle) { dispatch(toggleShuffle() as any) }; dispatch(startPlaylistPlayback({ playlistId }) as any) } } disabled={ !tracks.length }>
+                            <ActionPill onPress={ async () => {
+                                try {
+                                    if (!tracks.length) return
+                                    // Pick a random track to start from for classic shuffle behavior
+                                    const randIndex = Math.floor(Math.random() * tracks.length)
+                                    const startId = tracks[randIndex]?.id
+                                    if (!playbackMeta?.isShuffle) {
+                                        dispatch(setShuffle(true))
+                                    }
+                                    await (dispatch as any)(startPlaylistPlayback({ playlistId, startTrackId: startId }))
+                                    navigation.navigate('Player')
+                                } catch (e) {
+                                    console.warn('Shuffle play failed', e)
+                                }
+                            } } disabled={ !tracks.length }>
                                 <Icon name='shuffle' size={16} color={ colors.pureWhite } />
                                 <McText medium size={12} color={ colors.pureWhite } style={{ marginLeft: 6 }}>Shuffle</McText>
                             </ActionPill>

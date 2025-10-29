@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { createAsyncThunk, createSelector } from '@reduxjs/toolkit'
+import { Platform } from 'react-native'
 import TrackPlayer, { RepeatMode, State as TrackPlayerState } from 'react-native-track-player'
 
 import { ITrack } from '../../Store/Actions/currentTrack.actions'
@@ -68,6 +69,13 @@ const shuffleQueue = (queue: QueueItem[], currentIndex: number): { queue: QueueI
 }
 
 const serializeQueue = (queue: QueueItem[]): QueueItem[] => queue.map((item) => ({ ...item }))
+
+const getAdaptiveChunkSize = (length: number): number => {
+    const base = Platform.OS === 'android' ? 100 : 200
+    if (length > 2000) return Math.min(base, 100)
+    if (length > 1000) return Math.min(base, 150)
+    return base
+}
 
 const ensureTrackPlayerReady = async () => {
     try {
@@ -211,7 +219,10 @@ export const startPlaylistPlayback = createAsyncThunk<void, StartPlaylistPayload
 
         await ensureTrackPlayerReady()
         await TrackPlayer.reset()
-        await TrackPlayer.add(effectiveQueue.map(queueItemToTrackPlayer))
+        const CHUNK_SIZE = getAdaptiveChunkSize(effectiveQueue.length)
+        const firstChunkSize = Math.min(effectiveQueue.length, Math.max(CHUNK_SIZE, effectiveIndex + 1))
+        const firstChunk = effectiveQueue.slice(0, firstChunkSize)
+        await TrackPlayer.add(firstChunk.map(queueItemToTrackPlayer))
         if (effectiveIndex > 0) {
             await TrackPlayer.skip(+effectiveQueue[effectiveIndex].id)
         }
@@ -225,6 +236,16 @@ export const startPlaylistPlayback = createAsyncThunk<void, StartPlaylistPayload
         dispatch(setQueue({ queue: effectiveQueue, playlistId, currentIndex: effectiveIndex, preserveOriginal: true }))
         dispatch(setPosition(safeStartPosition))
         dispatch(persistQueueToStorage())
+
+        for (let i = firstChunkSize; i < effectiveQueue.length; i += CHUNK_SIZE) {
+            const batch = effectiveQueue.slice(i, i + CHUNK_SIZE)
+            try {
+                await TrackPlayer.add(batch.map(queueItemToTrackPlayer))
+            } catch (error) {
+                console.warn('Failed to add playlist batch', { index: i, size: batch.length, error })
+                break
+            }
+        }
     },
 )
 
@@ -236,7 +257,7 @@ export const playTracksNow = createAsyncThunk<void, QueueItem[], { state: RootSt
         }
 
         const { repeatMode } = getState().playerQueue
-        const CHUNK_SIZE = 200
+        const CHUNK_SIZE = getAdaptiveChunkSize(queueItems.length)
         const firstChunkSize = Math.min(queueItems.length, CHUNK_SIZE)
         const firstChunk = queueItems.slice(0, firstChunkSize)
 
@@ -444,7 +465,10 @@ export const toggleShuffle = createAsyncThunk<void, void, { state: RootState }>(
             const sourceQueue = originalQueue.length ? originalQueue : queue
             const shuffled = shuffleQueue(sourceQueue, currentIndex >= 0 ? currentIndex : 0)
             await TrackPlayer.reset()
-            await TrackPlayer.add(shuffled.queue.map(queueItemToTrackPlayer))
+            const CHUNK_SIZE = getAdaptiveChunkSize(shuffled.queue.length)
+            const firstChunkSize = Math.min(shuffled.queue.length, Math.max(CHUNK_SIZE, shuffled.currentIndex + 1))
+            const firstChunk = shuffled.queue.slice(0, firstChunkSize)
+            await TrackPlayer.add(firstChunk.map(queueItemToTrackPlayer))
             const currentItem = shuffled.queue[shuffled.currentIndex]
             if (currentItem) {
                 await TrackPlayer.skip(+currentItem.id)
@@ -454,12 +478,24 @@ export const toggleShuffle = createAsyncThunk<void, void, { state: RootState }>(
             }
             dispatch(setQueue({ queue: shuffled.queue, currentIndex: shuffled.currentIndex, preserveOriginal: true }))
             dispatch(setShuffle(true))
+            for (let i = firstChunkSize; i < shuffled.queue.length; i += CHUNK_SIZE) {
+                const batch = shuffled.queue.slice(i, i + CHUNK_SIZE)
+                try {
+                    await TrackPlayer.add(batch.map(queueItemToTrackPlayer))
+                } catch (error) {
+                    console.warn('Failed to add shuffled batch', { index: i, size: batch.length, error })
+                    break
+                }
+            }
         } else {
             const activeIndex = currentIndex >= 0 ? currentIndex : 0
             const activeId = queue[activeIndex]?.id
             await TrackPlayer.reset()
-            await TrackPlayer.add(originalQueue.map(queueItemToTrackPlayer))
+            const CHUNK_SIZE = getAdaptiveChunkSize(originalQueue.length)
             let nextIndex = 0
+            const firstChunkSize = Math.min(originalQueue.length, CHUNK_SIZE)
+            const firstChunk = originalQueue.slice(0, firstChunkSize)
+            await TrackPlayer.add(firstChunk.map(queueItemToTrackPlayer))
             if (activeId) {
                 const originalIndex = originalQueue.findIndex((item) => item.id === activeId)
                 if (originalIndex >= 0) {
@@ -472,6 +508,15 @@ export const toggleShuffle = createAsyncThunk<void, void, { state: RootState }>(
             }
             dispatch(setQueue({ queue: originalQueue, currentIndex: nextIndex }))
             dispatch(setShuffle(false))
+            for (let i = firstChunkSize; i < originalQueue.length; i += CHUNK_SIZE) {
+                const batch = originalQueue.slice(i, i + CHUNK_SIZE)
+                try {
+                    await TrackPlayer.add(batch.map(queueItemToTrackPlayer))
+                } catch (error) {
+                    console.warn('Failed to add original batch', { index: i, size: batch.length, error })
+                    break
+                }
+            }
         }
 
         dispatch(setPosition(position))
