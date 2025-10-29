@@ -1,22 +1,30 @@
-import React, { useEffect, useState } from 'react'
-import { BillboardsProps, IBillboardCardProps, IBillboardProps } from '../../types'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { BillboardsProps, IBillboardCardProps } from '../../types'
 import { styled } from 'styled-components/native'
-import { McImage, McText, McVectorIcon } from '../../Components'
+import { McText, McVectorIcon } from '../../Components'
 import { Colors, Images } from '../../Constants'
-import { Dimensions, ScrollView, StatusBar, StyleSheet, View } from 'react-native'
+import { Dimensions, FlatList, LayoutAnimation, Platform, UIManager, Animated, Easing, View, ImageBackground } from 'react-native'
 import { Billboard } from '../../Mock/Dummy'
 import BillboardCard from '../../Components/BillboardCard'
-import LinearGradient from 'react-native-linear-gradient'
 import AnimatedPlayButton from '../../Components/AnimatedPlayButton'
+import LinearGradient from 'react-native-linear-gradient'
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window')
+const HEADER_HEIGHT = Math.min(Math.max(screenHeight * 0.5, 280), 380)
+// Animated wrapper for ImageBackground (Animated doesn't expose ImageBackground by default)
+const AnimatedImageBG = Animated.createAnimatedComponent(ImageBackground as any)
 
 const Billboards = ({ route }: BillboardsProps) => {
-    const { info: { title } } = route.params
+    const title = (route as any)?.params?.info?.title ?? 'Billboard'
     const [isLoading, setLoading] = useState(false)
-    // const [billboard, setBillboard] = useState<undefined | any>(undefined)
     const billboard = JSON.parse(JSON.stringify(Billboard))
-    const url = "https://ws.audioscrobbler.com/2.0?method=artist.gettoptracks&artist=cher&api_key=550c0434f71ec3c548afccd80f020d63&format=json"
+    const [items, setItems] = useState<IBillboardCardProps[]>([])
+    const headerOpacity = useRef(new Animated.Value(0)).current
+    const scrollY = useRef(new Animated.Value(0)).current
+
+    if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+        UIManager.setLayoutAnimationEnabledExperimental(true)
+    }
 
     // const getBillboard = async () => {
     //     try {
@@ -39,57 +47,155 @@ const Billboards = ({ route }: BillboardsProps) => {
     //     getBillboard()
     // }, [])
 
+    useEffect(() => {
+        const content = billboard?.content ?? {}
+        const parsed: IBillboardCardProps[] = Object.values(content).map((raw: any) => {
+            const keys = Object.keys(raw)
+            const vals = Object.values(raw)
+            let acc: any = {}
+            for (let i = 0; i < keys.length; i++) {
+                const k = keys[i]
+                const safeKey = k.includes(' ')
+                    ? (k.includes('.') ? k.split('.').join('') : k.split(' ').join('_'))
+                    : k
+                acc = { ...acc, [safeKey]: vals[i] }
+            }
+            return acc as IBillboardCardProps
+        })
+        setItems(parsed)
+
+        Animated.timing(headerOpacity, {
+            toValue: 1,
+            duration: 360,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+        }).start()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
+
+    const trackCount = items.length
+    const chartDate = billboard?.info?.date
+    const stickyOpacity = scrollY.interpolate({ inputRange: [40, 80], outputRange: [0, 1], extrapolate: 'clamp' })
+
+    const handleShuffle = () => {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
+        const next = [...items]
+        for (let i = next.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1))
+            ;[next[i], next[j]] = [next[j], next[i]]
+        }
+        setItems(next)
+    }
+
+    const handlePlayAll = () => {
+        // Integrate with player when available
+        // For now, provide a lightweight feedback via console
+        console.log('Play all from Billboard list')
+    }
+
+    const renderHeader = () => {
+        const translateY = scrollY.interpolate({
+            inputRange: [-HEADER_HEIGHT, 0, HEADER_HEIGHT],
+            outputRange: [-HEADER_HEIGHT * 0.4, 0, HEADER_HEIGHT * 0.3],
+            extrapolate: 'clamp',
+        })
+        const scale = scrollY.interpolate({
+            inputRange: [-HEADER_HEIGHT, 0],
+            outputRange: [1.15, 1],
+            extrapolateRight: 'clamp',
+        })
+        return (
+            <Animated.View style={{ opacity: headerOpacity }}>
+                <View style={{ marginHorizontal: -16 }}>
+                    <AnimatedMusicCoverBackground
+                        source={ Images.BillboardCover }
+                        imageStyle={{ opacity: 0.95 }}
+                        style={{ transform: [{ translateY }, { scale }] }}
+                    >
+                        <LinearGradient
+                            colors={ ['rgba(6,0,20,0.0)', 'rgba(6,0,20,0.85)'] }
+                            style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '70%' }}
+                        />
+                        <HeaderOverlay>
+                            <McText extra size={28} color={Colors.grey5}>{ title }</McText>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, flexWrap: 'wrap' }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 16, marginTop: 4 }}>
+                                    <McVectorIcon type='Feather' name='list' size={14} color={Colors.grey4} />
+                                    <McText size={12} color={Colors.grey4} style={{ marginLeft: 6 }}>{ trackCount } tracks</McText>
+                                </View>
+                                {!!chartDate && (
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                                        <McVectorIcon type='Feather' name='calendar' size={14} color={Colors.grey4} />
+                                        <McText size={12} color={Colors.grey4} style={{ marginLeft: 6 }}>Updated { chartDate }</McText>
+                                    </View>
+                                )}
+                            </View>
+                            <ActionsRow style={{ marginTop: 14 }}>
+                                <ActionButton onPress={ handlePlayAll } accessibilityLabel='Play all'>
+                                    <McVectorIcon type='Feather' name='play' size={16} color={Colors.grey5} />
+                                    <McText medium size={13} color={Colors.grey5} style={{ marginLeft: 8 }}>Play all</McText>
+                                </ActionButton>
+                                <ActionButton onPress={ handleShuffle } style={{ marginLeft: 12 }} accessibilityLabel='Shuffle all'>
+                                    <McVectorIcon type='Feather' name='shuffle' size={16} color={Colors.grey5} />
+                                    <McText medium size={13} color={Colors.grey5} style={{ marginLeft: 8 }}>Shuffle</McText>
+                                </ActionButton>
+                            </ActionsRow>
+                        </HeaderOverlay>
+                    </AnimatedMusicCoverBackground>
+                </View>
+            </Animated.View>
+        )
+    }
+
+    const renderItem = ({ item }: { item: IBillboardCardProps }) => (
+        <BillboardCard
+            data={ item }
+            onPress={ () => {} }
+            onPlayPress={ () => {} }
+        />
+    )
+
     return (
         <Container>
-            {
-                isLoading
-                ?
-                <View style={{flex: 1, justifyContent: 'center'}}>
-                    <AnimatedPlayButton 
-                        size={78} 
-                        circle={70}
-                        icon={Images.musicIcon}
-                    />
+            {isLoading ? (
+                <View style={{ flex: 1, justifyContent: 'center' }}>
+                    <AnimatedPlayButton size={78} circle={70} />
                 </View>
-                :
-                <>
-                    <MusicCoverBackground source={ Images.BillboardCover } style={{width: screenWidth, height: screenHeight * 0.5, opacity: 0.5}}/>
-                    <LinearGradient 
-                        style={{position: 'absolute', width: screenWidth, height: screenHeight * 0.2, bottom: screenHeight * 0.5}}
-                        colors={['transparent',Colors.background]}
-                    />
-                    <View style={{backgroundColor: Colors.primary, position: 'relative', borderRadius: 6, paddingLeft: 8, width: screenWidth * 0.65, justifyContent: 'flex-start', alignSelf: 'flex-start', marginBottom: 24, height: 100}}>
-                        <View style={{borderRadius: 999, position: 'absolute', right: 48, top: -12, width: 60, height: 60, backgroundColor: Colors.background}} />
-                        <View style={{position: 'absolute', right: 0, top: -12, width: 80, height: 60, backgroundColor: Colors.background}} />
-                        <McText bold size={ 20 } color={ Colors.white } style={{ marginTop: 8 }}>{ title }</McText>
-                    </View>
-                    <ScrollView contentContainerStyle={{width: '100%'}} showsVerticalScrollIndicator={false}>
-                        {
-                            billboard
-                            ?
-                            Object.values(billboard.content).map((item, index: number) => {
-                                const keys = Object.keys(item as object)
-                                const vals = Object.values(item as object)
-                                const len = keys.length
-                                let billboardData = {}
-                                let temp = billboardData
-                                for(let i = 0; i < len; i++) {
-                                    const key = keys[i].split(' ').length > 1 ? keys[i].split(' ').join('_').includes('.') ? keys[i].split('.').join('') : keys[i].split(' ').join('_') : keys[i]
-                                    const val = vals[i]
-                                    billboardData = {...temp, [key]: val}
-                                    temp = billboardData
-                                }
-                                return (
-                                    <BillboardCard key={index} data={billboardData as IBillboardCardProps} />
-                                )
-                            })
-                            : 
-                            <McText>No Data found</McText>
-                        }
-                    </ScrollView>
-                </>
-            }
-            
+            ) : (
+                <Animated.FlatList
+                    data={ items }
+                    keyExtractor={(it, idx) => `${it.rank}_${it.title}_${idx}`}
+                    renderItem={ renderItem }
+                    ListHeaderComponent={ renderHeader }
+                    style={{ flex: 1, alignSelf: 'stretch' }}
+                    contentContainerStyle={{ paddingBottom: 12, paddingHorizontal: 16 }}
+                    showsVerticalScrollIndicator={ false }
+                    removeClippedSubviews
+                    windowSize={ 7 }
+                    initialNumToRender={ 12 }
+                    onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
+                />
+            )}
+            <StickyBar style={{ opacity: stickyOpacity }}>
+                <BarSurface>
+                    <ActionsRow>
+                        <SmallIconButton onPress={ handlePlayAll } accessibilityLabel='Play all'>
+                            <McVectorIcon type='Feather' name='play' size={16} color={Colors.grey5} />
+                            <McText medium size={11} color={Colors.grey5} style={{ marginLeft: 6 }}>Play</McText>
+                        </SmallIconButton>
+                        <SmallIconButton onPress={ handleShuffle } accessibilityLabel='Shuffle all' style={{ marginLeft: 10 }}>
+                            <McVectorIcon type='Feather' name='shuffle' size={16} color={Colors.grey5} />
+                            <McText medium size={11} color={Colors.grey5} style={{ marginLeft: 6 }}>Shuffle</McText>
+                        </SmallIconButton>
+                        <SmallIconButton accessibilityLabel='Save chart' style={{ marginLeft: 10 }}>
+                            <McVectorIcon type='Feather' name='heart' size={16} color={Colors.grey5} />
+                        </SmallIconButton>
+                        <SmallIconButton accessibilityLabel='Share chart' style={{ marginLeft: 10 }}>
+                            <McVectorIcon type='Feather' name='share-2' size={16} color={Colors.grey5} />
+                        </SmallIconButton>
+                    </ActionsRow>
+                </BarSurface>
+            </StickyBar>
         </Container>
     )
 }
@@ -98,14 +204,58 @@ export default Billboards
 
 const Container = styled.View`
     flex: 1;
-    padding: 0px 12px 0 12px;
+    padding: 0px;
     background-color: ${ Colors.background };
+    align-items: stretch;
+`
+
+const ActionsRow = styled.View`
+    flex-direction: row;
     align-items: center;
 `
 
-const MusicCoverBackground = styled.ImageBackground`
+const AnimatedMusicCoverBackground = styled(AnimatedImageBG as any)`
     width: 100%;
-    height: 200px;
-    background-position: center center;
+    height: ${HEADER_HEIGHT}px;
 `
 
+const HeaderOverlay = styled.View`
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    padding: 16px;
+`
+
+const ActionButton = styled.TouchableOpacity`
+    padding: 10px 16px;
+    border-radius: 999px;
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.18);
+    background-color: rgba(0,0,0,0.25);
+    flex-direction: row;
+    align-items: center;
+`
+
+const StickyBar = styled(Animated.View)`
+    position: absolute;
+    left: 0; right: 0; top: 0;
+    padding-top: 8px;
+`
+
+const BarSurface = styled.View`
+    margin: 0 12px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.08);
+    background-color: rgba(12,0,24,0.45);
+`
+
+const SmallIconButton = styled.TouchableOpacity`
+    flex-direction: row;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.12);
+    background-color: rgba(255,255,255,0.06);
+`
