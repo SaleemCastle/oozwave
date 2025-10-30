@@ -26,6 +26,7 @@ import { Colors, Images, Metrics } from '../../Constants'
 import { dummyData } from '../../Mock'
 import { ITrack } from '../../Store/Actions/currentTrack.actions'
 import { McText, McImage, PlayButton, McVectorIcon } from '../../Components'
+import MarqueeText from '../../Components/shared/MarqueeText'
 import AppDrawer, { DrawerOption } from '../../Components/AppDrawer'
 import { styles } from './styles';
 import { useAppDispatch, useAppSelector } from '../../hooks/reduxHooks'
@@ -373,12 +374,13 @@ const Home = ({ navigation }: HomeProps) => {
                             <CoverImage
                                 //@ts-ignore
                                     src={ currentTrack?.path }
-                                    // placeHolder={ 'https://cdn2.iconfinder.com/data/icons/Qetto___icons_by_ampeross-d4njobq/256/library-music.png' }
-                                    // width={ 38 }
-                                    // height={ 38 }
+                                    placeHolder={ Images.DefaultMusicIcon }
+                                    width={ 38 }
+                                    style={{borderRadius: 19}}
+                                    height={ 38 }
                                 />
-                                <View style={{ marginLeft: 12, maxWidth: '70%' }}>
-                                    <McText bold size={ 12 } color={ Colors.grey5 }>{ currentTrack.title }</McText>
+                                <View style={{ marginLeft: 12, maxWidth: '75%', width: '75%' }}>
+                                    <MarqueeText containerStyle={{ width: '100%' }} text={ currentTrack.title } bold size={ 12 } color={ Colors.grey5 } />
                                     <McText medium size={ 12 } color={ Colors.grey3 } style={{ marginTop: 4 }} numberOfLines={ 1 }>{ currentTrack?.artist }</McText>
                                 </View>
                             </View>
@@ -470,3 +472,4 @@ const BottomSection = styled.View`
     z-index: 1;
 `
 export default Home
+

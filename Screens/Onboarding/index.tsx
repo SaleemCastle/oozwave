@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { StatusBar, View } from 'react-native'
+import { StatusBar, View, InteractionManager } from 'react-native'
 import MusicFiles, { Constants, ResponseShape, ITrack as DeviceTrack } from 'react-native-get-music-files-v3dev-test'
 import styled from 'styled-components/native'
 
 import { Colors, Images } from '../../Constants'
 import { McText, McImage, PlayButton } from '../../Components'
+import WaveformLoader from '../../Components/shared/WaveformLoader'
 import TrackPlayer, { AppKilledPlaybackBehavior, Capability } from 'react-native-track-player'
 import { checkPermissions } from '../../services/requestPermissions'
 import { OnboardingProps, PermissionStatus } from '../../types'
@@ -13,7 +14,10 @@ import { addTracks, addTracksError } from '../../Store/Actions/tracks.actions'
 import { ADD_TRACKS_ERROR } from '../../Store/ReduxConstants'
 import { RootState } from '../../Store/store'
 
-const SCAN_REQUEST_DELAY_MS = 100
+const SCAN_REQUEST_DELAY_MS = 50
+const PAGE_SIZE = 2000
+const CHUNK = 500
+const SLEEP = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
  
 const Onboarding = ({ navigation }: OnboardingProps) => {
     const dispatch = useAppDispatch()
@@ -21,12 +25,10 @@ const Onboarding = ({ navigation }: OnboardingProps) => {
     const storedTracks = useAppSelector((state: RootState) => state.tracks)
     const hasStoredTracks = useMemo(() => (storedTracks ?? []).some((track) => (track?.path ?? '').length > 0), [storedTracks])
 
-    const [isScanning, setIsScanning] = useState(false)
-    const [scanProgress, setScanProgress] = useState(0)
+    const [isLoading, setIsLoading] = useState(false)
     const [statusMessage, setStatusMessage] = useState('')
     const [scanResult, setScanResult] = useState<'success' | 'error' | null>(null)
 
-    const progressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
     const navigateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const scanRequestTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -56,13 +58,6 @@ const Onboarding = ({ navigation }: OnboardingProps) => {
         checkPermissions()
     }, [])
 
-    const clearProgressTimer = useCallback(() => {
-        if (progressTimerRef.current) {
-            clearInterval(progressTimerRef.current)
-            progressTimerRef.current = null
-        }
-    }, [])
-
     const clearNavigateTimer = useCallback(() => {
         if (navigateTimeoutRef.current) {
             clearTimeout(navigateTimeoutRef.current)
@@ -79,32 +74,16 @@ const Onboarding = ({ navigation }: OnboardingProps) => {
 
     useEffect(() => {
         return () => {
-            clearProgressTimer()
             clearNavigateTimer()
             clearScanRequestTimer()
         }
-    }, [clearProgressTimer, clearNavigateTimer, clearScanRequestTimer])
+    }, [clearNavigateTimer, clearScanRequestTimer])
 
-    const beginProgressLoop = useCallback(() => {
-        clearProgressTimer()
-
-        progressTimerRef.current = setInterval(() => {
-            setScanProgress((current) => {
-                if (current >= 90) {
-                    return current
-                }
-
-                const increment = Math.max(1, Math.round(Math.random() * 6))
-                return Math.min(current + increment, 90)
-            })
-        }, 250)
-    }, [clearProgressTimer])
-
-    const finishScan = useCallback((isSuccessful: boolean, message: string) => {
-        clearProgressTimer()
+    const finishScan = useCallback(async (isSuccessful: boolean, message: string) => {
         clearScanRequestTimer()
-        setScanProgress(100)
-        setIsScanning(false)
+
+        // Now show completion state/message and proceed
+        setIsLoading(false)
         setStatusMessage(message)
         setScanResult(isSuccessful ? 'success' : 'error')
 
@@ -113,9 +92,9 @@ const Onboarding = ({ navigation }: OnboardingProps) => {
         if (isSuccessful) {
             navigateTimeoutRef.current = setTimeout(() => {
                 navigation.navigate('Library')
-            }, 1800)
+            }, 1200)
         }
-    }, [clearNavigateTimer, clearProgressTimer, clearScanRequestTimer, navigation])
+    }, [clearNavigateTimer, clearScanRequestTimer, navigation])
 
     const handleScanError = useCallback((error: unknown) => {
         console.warn(error)
@@ -173,15 +152,93 @@ const Onboarding = ({ navigation }: OnboardingProps) => {
         finishScan(true, `${filteredTracks.length} tracks ready. Launching your library...`)
     }, [dispatch, finishScan])
 
-    const handleScanPress = useCallback(() => {
-        if (isScanning) {
+    const startScanAfterPaint = useCallback(() => new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+            InteractionManager.runAfterInteractions(() => resolve())
+        })
+    }), [])
+
+    const safeTrackFilter = useCallback((track: DeviceTrack) => {
+        const title = (track.title ?? '').trim().toUpperCase()
+        const album = (track.album ?? '').trim().toLowerCase()
+        const rawPath = track.path ?? ''
+        const normalizedPath = rawPath.replace(/\\/g, '/').toLowerCase()
+
+        let decoded = normalizedPath
+        try { decoded = decodeURIComponent(normalizedPath) } catch {}
+
+        const isInMusicFolder = normalizedPath.includes('/music/') || decoded.includes('/music/')
+        if (isInMusicFolder) return true
+
+        const isWhatsAppAlbum = album === 'whatsapp audio'
+        const isWhatsAppTitle = title.startsWith('AUD-') || title.startsWith('PTT-')
+        const whatsappHints = [
+            '/whatsapp audio/', '/whatsapp voice notes/', '/whatsapp documents/', '/whatsapp/', 'com.whatsapp',
+        ]
+        const isWhatsAppPath = whatsappHints.some((h) => normalizedPath.includes(h) || decoded.includes(h))
+
+        return !(isWhatsAppPath || (isWhatsAppAlbum && isWhatsAppTitle))
+    }, [])
+
+    const scanInBatches = useCallback(async () => {
+        const all: DeviceTrack[] = []
+        const seen = new Set<number | string>()
+        let page = 0
+        let lastUiUpdate = 0
+
+        while (true) {
+            const resp = await MusicFiles.getAll({
+                cover: false,
+                coverQuality: 0,
+                batchSize: PAGE_SIZE,
+                batchNumber: page,
+                minimumSongDuration: 60 * 1000,
+                sortBy: Constants.SortBy.Title.toString(),
+                sortOrder: Constants.SortOrder.Ascending.toString(),
+            })
+            const results = resp?.results ?? []
+            if (!results.length) break
+
+            let addedThisPage = 0
+            for (let i = 0; i < results.length; i += CHUNK) {
+                const slice = results.slice(i, i + CHUNK)
+                const filtered = slice.filter((t) => {
+                    const id = (t as any).id ?? `${t.title}-${t.path}`
+                    if (seen.has(id)) return false
+                    const keep = safeTrackFilter(t)
+                    if (keep) {
+                        seen.add(id)
+                    }
+                    return keep
+                })
+                if (filtered.length) {
+                    all.push(...filtered)
+                    addedThisPage += filtered.length
+                }
+                const now = Date.now()
+                if (now - lastUiUpdate > 300) {
+                    setStatusMessage(`Scanning… ${all.length.toLocaleString()} tracks found`)
+                    lastUiUpdate = now
+                }
+                await SLEEP(0)
+            }
+
+            page += 1
+            if (addedThisPage === 0 || results.length < PAGE_SIZE) {
+                break
+            }
+        }
+        return all
+    }, [safeTrackFilter])
+
+    const handleScanPress = useCallback(async () => {
+        if (isLoading) {
             return
         }
 
         if (hasStoredTracks) {
             setStatusMessage('Launching your library...')
             setScanResult('success')
-            setScanProgress(100)
             navigation.navigate('Library')
             return
         }
@@ -193,25 +250,25 @@ const Onboarding = ({ navigation }: OnboardingProps) => {
         }
 
         setScanResult(null)
-        setStatusMessage('Scanning your device for music...')
-        setScanProgress(0)
-        setIsScanning(true)
-
-        beginProgressLoop()
+        setStatusMessage('Preparing scan...')
+        setIsLoading(true)
         clearScanRequestTimer()
 
-        scanRequestTimeoutRef.current = setTimeout(() => {
-            MusicFiles.getAll({
-                batchSize: 5000,
-                batchNumber: 0,
-                minimumSongDuration: 60 * 1000,
-                sortBy: Constants.SortBy.Title.toString(),
-                sortOrder: Constants.SortOrder.Ascending.toString(),
-            })
-                .then(handleScanSuccess)
-                .catch(handleScanError)
-        }, SCAN_REQUEST_DELAY_MS)
-    }, [beginProgressLoop, clearScanRequestTimer, handleScanError, handleScanSuccess, hasStoredTracks, isScanning, navigation, permission.permission])
+        try {
+            await startScanAfterPaint()
+            const tracks = await scanInBatches()
+
+            if (tracks.length === 0) {
+                finishScan(false, 'No matching tracks found. Make sure your music is at least 60 seconds long and stored in the Music folder.')
+                return
+            }
+
+            dispatch(addTracks(tracks))
+            finishScan(true, `${tracks.length} tracks ready. Launching your library...`)
+        } catch (err) {
+            handleScanError(err)
+        }
+    }, [clearScanRequestTimer, dispatch, finishScan, handleScanError, hasStoredTracks, isLoading, navigation, permission.permission, scanInBatches, startScanAfterPaint])
 
     return (
         <Container>
@@ -224,22 +281,21 @@ const Onboarding = ({ navigation }: OnboardingProps) => {
                 Music is not an entertainment, but also it is our life
             </McText>
 
-            <McText color={ Colors.grey4 } size={ 14 } align='center' style={{ marginHorizontal: 40, marginTop: 32 }}>
+            <McText regular color={ Colors.grey4 } size={ 14 } align='center' style={{ marginHorizontal: 40, marginTop: 32 }}>
                 Tap the button below to grant access and let Oozwave scan your device for music files.
             </McText>
 
             <View style={{ marginTop: 48, alignItems: 'center' }}>
                 {
-                    isScanning
+                    isLoading
                         ? (
                             <ScanStatusContainer>
                                 <McText medium size={ 16 } color={ Colors.primary } align='center'>
                                     { statusMessage }
                                 </McText>
-                                <ProgressBar>
-                                    <ProgressFill style={{ width: `${scanProgress}%` }} />
-                                </ProgressBar>
-                                <McText size={ 12 } color={ Colors.grey4 }>{ `${scanProgress}% complete` }</McText>
+                                <View style={{ width: '100%', marginTop: 12 }}>
+                                    <WaveformLoader height={ 56 } />
+                                </View>
                             </ScanStatusContainer>
                         )
                         : (
@@ -254,7 +310,7 @@ const Onboarding = ({ navigation }: OnboardingProps) => {
             </View>
 
             {
-                !isScanning && statusMessage.length > 0 && (
+                !isLoading && statusMessage.length > 0 && (
                     <ResultMessage>
                         <McText
                             medium
@@ -278,19 +334,7 @@ const Container = styled.SafeAreaView`
     align-items: center;
 `
 
-const ProgressBar = styled.View`
-    width: 220px;
-    height: 8px;
-    background-color: ${ Colors.grey1 };
-    border-radius: 4px;
-    margin: 16px 0 8px;
-    overflow: hidden;
-`
-
-const ProgressFill = styled.View`
-    height: 100%;
-    background-color: ${ Colors.primary };
-`
+// Progress bar removed in favor of a music-inspired loader
 
 const ScanStatusContainer = styled.View`
     align-items: center;
@@ -314,3 +358,4 @@ export default Onboarding
 
 
 
+    // Reanimated overlay state (UI-thread). Always mounted; opacity is animated.

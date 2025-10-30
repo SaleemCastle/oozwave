@@ -1,5 +1,5 @@
 import React, { memo, useMemo } from 'react'
-import { AccessibilityActionEvent, AccessibilityActionInfo, View } from 'react-native'
+import { AccessibilityActionEvent, AccessibilityActionInfo, View, StyleSheet } from 'react-native'
 import { PanGestureHandler, PanGestureHandlerGestureEvent } from 'react-native-gesture-handler'
 import Animated, { runOnJS, useAnimatedGestureHandler, useAnimatedStyle, useSharedValue } from 'react-native-reanimated'
 import { colors as themeColors } from '../../../theme/tokens'
@@ -68,6 +68,13 @@ const EqFader: React.FC<Props> = ({ value, min, max, onChange, onRelease, title,
 
   const neonColor = value === 0 ? 'rgba(255,255,255,0.16)' : (value > 0 ? themeColors.cyanPulse : themeColors.neonMagenta)
 
+  // Precompute a small, fixed set of tick positions (major every 2 dB, minor every 1 dB)
+  const TICKS = useMemo(() => {
+    const count = 21 // 0..20
+    const arr = new Array(count).fill(0).map((_, i) => i / (count - 1))
+    return arr
+  }, [])
+
   return (
     <View style={{ marginVertical: 18 }}>
       <Animated.Text style={{ color: '#FFF', fontWeight: '600', marginBottom: 6 }}>{`${title}`}</Animated.Text>
@@ -82,16 +89,13 @@ const EqFader: React.FC<Props> = ({ value, min, max, onChange, onRelease, title,
           onAccessibilityAction={onAccessibilityAction}
           style={{ width: trackWidth, height: 36, justifyContent: 'center' }}
         >
-          <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }}>
-            {Array.from({ length: Math.floor(trackWidth / 10) + 1 }).map((_, i) => (
-              <View key={i} style={{ position: 'absolute', left: i * 10, top: 0, bottom: 0, width: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
+          <View style={styles.ticksContainer}>
+            {TICKS.map((p, i) => (
+              <View key={i} style={[styles.tick, { left: p * trackWidth, opacity: (i % 5 === 0) ? 0.28 : 0.12, height: (i % 5 === 0) ? 16 : 10, top: (i % 5 === 0) ? 0 : 3 }]} />
             ))}
           </View>
-          <Animated.View style={[{ height: 2, backgroundColor: neonColor }, indicatorStyle]} />
-          <Animated.View style={[{
-            position: 'absolute', top: 10, width: 16, height: 16, borderRadius: 8,
-            borderWidth: 4, borderColor: '#FFF', backgroundColor: Colors.background
-          }, handleStyle]} />
+          <Animated.View style={[styles.indicator, { backgroundColor: neonColor }, indicatorStyle]} />
+          <Animated.View style={[styles.handle, handleStyle]} />
         </Animated.View>
       </PanGestureHandler>
     </View>
@@ -99,3 +103,19 @@ const EqFader: React.FC<Props> = ({ value, min, max, onChange, onRelease, title,
 }
 
 export default memo(EqFader)
+
+const styles = StyleSheet.create({
+  ticksContainer: {
+    position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
+  },
+  tick: {
+    position: 'absolute', width: 1, backgroundColor: 'rgba(255,255,255,0.8)'
+  },
+  indicator: {
+    height: 2,
+  },
+  handle: {
+    position: 'absolute', top: 10, width: 16, height: 16, borderRadius: 8,
+    borderWidth: 4, borderColor: '#FFF', backgroundColor: Colors.background,
+  },
+})

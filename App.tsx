@@ -34,3 +34,26 @@ export default App
 TrackPlayer.registerPlaybackService(() => require('./services/TrackPlayer.service'))
 TrackPlayer.setupPlayer()
 
+if (typeof __DEV__ !== 'undefined' && __DEV__) {
+    setTimeout(() => {
+        try {
+            const state = store.getState()
+            const bytes = JSON.stringify(state).length
+            const countProps = (o: any) => {
+                const seen = new Set<any>()
+                let props = 0
+                const stack = [o]
+                while (stack.length) {
+                    const n: any = stack.pop()
+                    if (n && typeof n === 'object' && !seen.has(n)) {
+                        seen.add(n)
+                        for (const k in n) { props++; stack.push(n[k]) }
+                    }
+                }
+                return props
+            }
+            // eslint-disable-next-line no-console
+            console.log('redux bytes ~', bytes, 'prop count ~', countProps(state))
+        } catch {}
+    }, 1500)
+}

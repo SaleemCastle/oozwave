@@ -3,7 +3,8 @@ import { BillboardsProps, IBillboardCardProps } from '../../types'
 import { styled } from 'styled-components/native'
 import { McText, McVectorIcon } from '../../Components'
 import { Colors, Images } from '../../Constants'
-import { Dimensions, FlatList, LayoutAnimation, Platform, UIManager, Animated, Easing, View, ImageBackground } from 'react-native'
+import { Dimensions, FlatList, LayoutAnimation, Platform, UIManager, Animated, Easing, View, ImageBackground, ScrollView, TouchableOpacity, StyleSheet } from 'react-native'
+import { Swipeable } from 'react-native-gesture-handler'
 import { Billboard } from '../../Mock/Dummy'
 import BillboardCard from '../../Components/BillboardCard'
 import AnimatedPlayButton from '../../Components/AnimatedPlayButton'
@@ -19,6 +20,8 @@ const Billboards = ({ route }: BillboardsProps) => {
     const [isLoading, setLoading] = useState(false)
     const billboard = JSON.parse(JSON.stringify(Billboard))
     const [items, setItems] = useState<IBillboardCardProps[]>([])
+    const [filter, setFilter] = useState<'All' | 'New' | 'Rising' | 'Re-entries'>('All')
+    const [sortKey, setSortKey] = useState<'rank' | 'peak' | 'weeks' | 'alpha'>('rank')
     const headerOpacity = useRef(new Animated.Value(0)).current
     const scrollY = useRef(new Animated.Value(0)).current
 
@@ -77,6 +80,26 @@ const Billboards = ({ route }: BillboardsProps) => {
     const chartDate = billboard?.info?.date
     const stickyOpacity = scrollY.interpolate({ inputRange: [40, 80], outputRange: [0, 1], extrapolate: 'clamp' })
 
+    const data = React.useMemo(() => {
+        let arr = [...items]
+        if (filter === 'Rising') {
+            arr = arr.filter(it => String((it as any).detail).toLowerCase() === 'up')
+        } else if (filter === 'New') {
+            arr = arr.filter(it => !it.last_week || String(it.last_week).trim() === '')
+        } else if (filter === 'Re-entries') {
+            arr = arr.filter(_ => false)
+        }
+        const num = (v: any) => {
+            const n = parseInt(String(v ?? '0').replace(/[^0-9]/g, ''), 10)
+            return isNaN(n) ? 0 : n
+        }
+        if (sortKey === 'rank') arr.sort((a,b) => num(a.rank) - num(b.rank))
+        if (sortKey === 'peak') arr.sort((a,b) => num(a.peak_position) - num(b.peak_position))
+        if (sortKey === 'weeks') arr.sort((a,b) => num(b.weeks_on_chart) - num(a.weeks_on_chart))
+        if (sortKey === 'alpha') arr.sort((a,b) => String(a.title).localeCompare(String(b.title)))
+        return arr
+    }, [items, filter, sortKey])
+
     const handleShuffle = () => {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
         const next = [...items]
@@ -93,7 +116,7 @@ const Billboards = ({ route }: BillboardsProps) => {
         console.log('Play all from Billboard list')
     }
 
-    const renderHeader = () => {
+    const renderHeader = React.useCallback(() => {
         const translateY = scrollY.interpolate({
             inputRange: [-HEADER_HEIGHT, 0, HEADER_HEIGHT],
             outputRange: [-HEADER_HEIGHT * 0.4, 0, HEADER_HEIGHT * 0.3],
@@ -106,16 +129,13 @@ const Billboards = ({ route }: BillboardsProps) => {
         })
         return (
             <Animated.View style={{ opacity: headerOpacity }}>
-                <View style={{ marginHorizontal: -16 }}>
+                <FullBleed>
                     <AnimatedMusicCoverBackground
                         source={ Images.BillboardCover }
                         imageStyle={{ opacity: 0.95 }}
                         style={{ transform: [{ translateY }, { scale }] }}
                     >
-                        <LinearGradient
-                            colors={ ['rgba(6,0,20,0.0)', 'rgba(6,0,20,0.85)'] }
-                            style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '70%' }}
-                        />
+                        <LinearGradient pointerEvents='none' colors={[ 'rgba(0,0,0,0)', Colors.background ]} locations={[0.45, 1]} style={ [StyleSheet.absoluteFillObject, styles.heroGradient] } />
                         <HeaderOverlay>
                             <McText extra size={28} color={Colors.grey5}>{ title }</McText>
                             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, flexWrap: 'wrap' }}>
@@ -142,18 +162,31 @@ const Billboards = ({ route }: BillboardsProps) => {
                             </ActionsRow>
                         </HeaderOverlay>
                     </AnimatedMusicCoverBackground>
-                </View>
+                </FullBleed>
             </Animated.View>
         )
-    }
+    }, [Colors.background, chartDate, headerOpacity, scrollY, title, trackCount])
 
-    const renderItem = ({ item }: { item: IBillboardCardProps }) => (
-        <BillboardCard
-            data={ item }
-            onPress={ () => {} }
-            onPlayPress={ () => {} }
-        />
-    )
+    const renderItem = React.useCallback(({ item }: { item: IBillboardCardProps }) => (
+        <Swipeable
+            renderLeftActions={() => (
+                <SwipeActionLeft>
+                    <McVectorIcon type='Feather' name='skip-forward' size={18} color={Colors.grey5} />
+                    <McText size={12} color={Colors.grey5} style={{ marginTop: 4 }}>Queue next</McText>
+                </SwipeActionLeft>
+            )}
+            renderRightActions={() => (
+                <SwipeActionRight>
+                    <McVectorIcon type='Feather' name='plus' size={18} color={Colors.grey5} />
+                    <McText size={12} color={Colors.grey5} style={{ marginTop: 4 }}>Add</McText>
+                </SwipeActionRight>
+            )}
+            overshootLeft={false}
+            overshootRight={false}
+        >
+            <BillboardCard data={ item } onPress={() => {}} onPlayPress={() => {}} />
+        </Swipeable>
+    ), [])
 
     return (
         <Container>
@@ -163,10 +196,27 @@ const Billboards = ({ route }: BillboardsProps) => {
                 </View>
             ) : (
                 <Animated.FlatList
-                    data={ items }
+                    data={ data }
                     keyExtractor={(it, idx) => `${it.rank}_${it.title}_${idx}`}
                     renderItem={ renderItem }
-                    ListHeaderComponent={ renderHeader }
+                    ListHeaderComponent={React.useMemo(() => () => (
+                        <>
+                            { renderHeader() }
+                            <FilterRow>
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 8 }}>
+                                    {(['All','New','Rising','Re-entries'] as const).map(key => (
+                                        <Chip key={key} active={filter===key} onPress={() => setFilter(key)}>
+                                            <McText medium size={12} color={filter===key ? Colors.grey5 : Colors.grey4}>{key}</McText>
+                                        </Chip>
+                                    ))}
+                                    <SortButton onPress={() => setSortKey(prev => prev==='rank'?'peak': prev==='peak'?'weeks': prev==='weeks'?'alpha':'rank')}>
+                                        <McVectorIcon type='Feather' name='sliders' size={14} color={Colors.grey4} />
+                                        <McText medium size={12} color={Colors.grey4} style={{ marginLeft: 6 }}>Sort: {sortKey}</McText>
+                                    </SortButton>
+                                </ScrollView>
+                            </FilterRow>
+                        </>
+                    ), [filter, sortKey, renderHeader])}
                     style={{ flex: 1, alignSelf: 'stretch' }}
                     contentContainerStyle={{ paddingBottom: 12, paddingHorizontal: 16 }}
                     showsVerticalScrollIndicator={ false }
@@ -223,6 +273,7 @@ const HeaderOverlay = styled.View`
     position: absolute;
     left: 0; right: 0; bottom: 0;
     padding: 16px;
+    z-index: 2;
 `
 
 const ActionButton = styled.TouchableOpacity`
@@ -235,6 +286,58 @@ const ActionButton = styled.TouchableOpacity`
     align-items: center;
 `
 
+const SwipeAction = styled.View`
+    width: 96px;
+    justify-content: center;
+    align-items: center;
+    marginVertical: 6px;
+    border-radius: 12px;
+`
+
+const SwipeActionLeft = styled(SwipeAction)`
+    background-color: rgba(0,200,255,0.18);
+    border-right-width: 1px;
+    border-color: rgba(255,255,255,0.1);
+`
+
+const SwipeActionRight = styled(SwipeAction)`
+    background-color: rgba(255,255,255,0.10);
+    border-left-width: 1px;
+    border-color: rgba(255,255,255,0.1);
+`
+
+const FilterRow = styled.View`
+    width: 100%;
+    padding-top: 6px;
+`
+
+const Chip = styled.TouchableOpacity<{ active: boolean }>`
+    padding: 8px 12px;
+    border-radius: 999px;
+    border-width: 1px;
+    border-color: ${({ active }) => active ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.12)'};
+    background-color: ${({ active }) => active ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.06)'};
+    margin-right: 10px;
+`
+
+const SortButton = styled.TouchableOpacity`
+    padding: 8px 12px;
+    border-radius: 999px;
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.12);
+    background-color: rgba(12,0,24,0.35);
+    flex-direction: row;
+    align-items: center;
+`
+
+const FullBleed = styled.View`
+    margin-left: -16px;
+    margin-right: -16px;
+`
+
+const styles = StyleSheet.create({
+    heroGradient: { zIndex: 1 } as any,
+})
 const StickyBar = styled(Animated.View)`
     position: absolute;
     left: 0; right: 0; top: 0;
