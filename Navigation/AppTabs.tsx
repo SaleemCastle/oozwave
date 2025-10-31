@@ -1,7 +1,7 @@
-import React, { useCallback } from 'react'
-import { StyleSheet, Text, View } from 'react-native'
+import React, { useCallback, useEffect, useRef } from 'react'
+import { Alert, BackHandler, DeviceEventEmitter, StyleSheet, Text, View } from 'react-native'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
-import { useNavigation } from '@react-navigation/native'
+import { useFocusEffect, useNavigation } from '@react-navigation/native'
 
 import TabBar from '../Components/TabBar'
 import { Colors } from '../Constants'
@@ -38,6 +38,40 @@ const AppTabs: React.FC = () => {
     const handleNowPlayingPress = useCallback(() => {
         navigation.navigate('Player')
     }, [navigation])
+
+    // Track Home drawer state via a simple event channel
+    const isHomeDrawerOpenRef = useRef(false)
+    useEffect(() => {
+        const sub = DeviceEventEmitter.addListener('homeDrawerOpen', (open: boolean) => {
+            isHomeDrawerOpenRef.current = Boolean(open)
+        })
+        return () => sub.remove()
+    }, [])
+
+    // Intercept Android back on the Library (tabs) root to confirm exit or close drawer first
+    useFocusEffect(
+        React.useCallback(() => {
+            const onBackPress = () => {
+                // If the custom Home drawer is open, request it to close and consume back
+                if (isHomeDrawerOpenRef.current) {
+                    DeviceEventEmitter.emit('homeDrawerRequestClose')
+                    return true
+                }
+                // Otherwise, ask to exit instead of closing immediately
+                Alert.alert(
+                    'Exit app',
+                    'Do you want to exit?',
+                    [
+                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'Exit', style: 'destructive', onPress: () => BackHandler.exitApp() },
+                    ]
+                )
+                return true
+            }
+            const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress)
+            return () => sub.remove()
+        }, [])
+    )
 
     return (
         <Tab.Navigator

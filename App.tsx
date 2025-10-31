@@ -37,8 +37,10 @@ TrackPlayer.setupPlayer()
 if (typeof __DEV__ !== 'undefined' && __DEV__) {
     setTimeout(() => {
         try {
-            const state = store.getState()
-            const bytes = JSON.stringify(state).length
+            const state = store.getState() as any
+            // Avoid stringifying huge collections like tracks/queue in dev
+            const { tracks, playerQueue, ...rest } = state || {}
+            const safeBytes = JSON.stringify(rest).length
             const countProps = (o: any) => {
                 const seen = new Set<any>()
                 let props = 0
@@ -53,7 +55,7 @@ if (typeof __DEV__ !== 'undefined' && __DEV__) {
                 return props
             }
             // eslint-disable-next-line no-console
-            console.log('redux bytes ~', bytes, 'prop count ~', countProps(state))
+            console.log('redux bytes (safe) ~', safeBytes, 'prop count ~', countProps(rest))
         } catch {}
     }, 1500)
 }

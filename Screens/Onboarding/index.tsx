@@ -23,7 +23,10 @@ const Onboarding = ({ navigation }: OnboardingProps) => {
     const dispatch = useAppDispatch()
     const permission = useAppSelector((state: RootState) => state.permission)
     const storedTracks = useAppSelector((state: RootState) => state.tracks)
-    const hasStoredTracks = useMemo(() => (storedTracks ?? []).some((track) => (track?.path ?? '').length > 0), [storedTracks])
+    const hasStoredTracks = useMemo(() => {
+        if (!Array.isArray(storedTracks)) return false
+        return storedTracks.some((track: any) => typeof track?.path === 'string' && track.path.length > 0)
+    }, [storedTracks])
 
     const [isLoading, setIsLoading] = useState(false)
     const [statusMessage, setStatusMessage] = useState('')
@@ -31,6 +34,7 @@ const Onboarding = ({ navigation }: OnboardingProps) => {
 
     const navigateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const scanRequestTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const didAutoRedirectRef = useRef(false)
 
     useEffect(() => {
         TrackPlayer.updateOptions({
@@ -79,6 +83,31 @@ const Onboarding = ({ navigation }: OnboardingProps) => {
         }
     }, [clearNavigateTimer, clearScanRequestTimer])
 
+    // Auto-skip onboarding when tracks already exist
+    useEffect(() => {
+        if (didAutoRedirectRef.current) return
+        if (hasStoredTracks) {
+            didAutoRedirectRef.current = true
+            setStatusMessage('Launching your library...')
+            setScanResult('success')
+            // Defer until after interactions to ensure nav is ready
+            InteractionManager.runAfterInteractions(() => {
+                clearNavigateTimer()
+                navigateTimeoutRef.current = setTimeout(() => {
+                    try {
+                        if (typeof navigation.replace === 'function') {
+                            navigation.replace('Library')
+                        } else {
+                            navigation.reset({ index: 0, routes: [{ name: 'Library' as never }] })
+                        }
+                    } catch (e) {
+                        // ignore navigation failures
+                    }
+                }, 200)
+            })
+        }
+    }, [clearNavigateTimer, hasStoredTracks, navigation])
+
     const finishScan = useCallback(async (isSuccessful: boolean, message: string) => {
         clearScanRequestTimer()
 
@@ -91,7 +120,12 @@ const Onboarding = ({ navigation }: OnboardingProps) => {
 
         if (isSuccessful) {
             navigateTimeoutRef.current = setTimeout(() => {
-                navigation.navigate('Library')
+                // Replace the stack so Onboarding isn't on back stack
+                if (typeof navigation.replace === 'function') {
+                    navigation.replace('Library')
+                } else {
+                    navigation.reset({ index: 0, routes: [{ name: 'Library' as never }] })
+                }
             }, 1200)
         }
     }, [clearNavigateTimer, clearScanRequestTimer, navigation])
@@ -188,8 +222,9 @@ const Onboarding = ({ navigation }: OnboardingProps) => {
 
         while (true) {
             const resp = await MusicFiles.getAll({
-                cover: false,
-                coverQuality: 0,
+                // Fetch embedded covers at a modest quality to enable caching/persistence
+                cover: true,
+                coverQuality: 40,
                 batchSize: PAGE_SIZE,
                 batchNumber: page,
                 minimumSongDuration: 60 * 1000,
@@ -239,7 +274,15 @@ const Onboarding = ({ navigation }: OnboardingProps) => {
         if (hasStoredTracks) {
             setStatusMessage('Launching your library...')
             setScanResult('success')
-            navigation.navigate('Library')
+            InteractionManager.runAfterInteractions(() => {
+                try {
+                    if (typeof navigation.replace === 'function') {
+                        navigation.replace('Library')
+                    } else {
+                        navigation.reset({ index: 0, routes: [{ name: 'Library' as never }] })
+                    }
+                } catch {}
+            })
             return
         }
 

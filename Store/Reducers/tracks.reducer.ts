@@ -11,11 +11,9 @@ const addTracksReducer = (state = initialState, action: AnyAction) => {
                 ...action.payload
             ]
         case ADD_TRACKS_ERROR: {
-            return {
-                ...[],
-                error: true,
-                errorMsg: action.payload
-            }
+            // Keep state shape stable (array of tracks)
+            // Optionally, log or handle error elsewhere
+            return state
         }
         default:
             return state

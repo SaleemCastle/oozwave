@@ -226,7 +226,27 @@ const CoverImage = React.memo(function CoverImage(props) {
   });
 });
 
+// Allow host app to pre-fill the in-memory cover cache after cold start
+const primeCoverCache = (entries) => {
+  try {
+    if (!Array.isArray(entries)) return;
+    entries.forEach((e) => {
+      const path = e?.path;
+      let cover = e?.cover;
+      if (typeof path !== 'string' || !path) return;
+      if (typeof cover !== 'string' || !cover) return;
+      if (!cover.startsWith('data:')) {
+        cover = `data:image/jpeg;base64,${cover}`;
+      }
+      coverCache.set(path, cover);
+    });
+  } catch (_) {
+    // ignore
+  }
+};
+
 module.exports = MusicFiles;
 module.exports.default = MusicFiles;
 module.exports.Constants = Constants;
 module.exports.CoverImage = CoverImage;
+module.exports.primeCoverCache = primeCoverCache;

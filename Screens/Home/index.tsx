@@ -9,6 +9,7 @@ import {
     Pressable,
     Animated,
     Alert,
+    DeviceEventEmitter,
     Easing,
     StyleSheet, 
 } from 'react-native'
@@ -158,6 +159,20 @@ const Home = ({ navigation }: HomeProps) => {
             }
         })
     }, [drawerProgress])
+
+    // Sync drawer state with a global channel so the tabs container can handle back presses
+    useEffect(() => {
+        DeviceEventEmitter.emit('homeDrawerOpen', drawerOpen)
+    }, [drawerOpen])
+
+    useEffect(() => {
+        const sub = DeviceEventEmitter.addListener('homeDrawerRequestClose', () => {
+            if (drawerOpen) {
+                closeDrawer()
+            }
+        })
+        return () => sub.remove()
+    }, [drawerOpen, closeDrawer])
 
     const toggleDrawer = useCallback(() => {
         if (drawerOpen) {
