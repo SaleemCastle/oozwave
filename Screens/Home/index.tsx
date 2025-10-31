@@ -405,7 +405,7 @@ const Home = ({ navigation }: HomeProps) => {
                                     <MCIcon name='heart-outline' size={20} color={'#FFFFFF'} />
                                 </View>
                             </Pressable>
-                            <PlayButton size={ 46 } circle={ 41.28 } icon={ isPlaying ? Images.pause : Images.miniplay} onPress={ handleMiniPlayer }></PlayButton>
+                            <PlayButton iconSize={20} size={ 46 } circle={ 41.28 } icon={ isPlaying ? "pause" : "play"} onPress={ handleMiniPlayer }></PlayButton>
                         </Pressable>
                     </BottomBar>
                 </BottomSection>

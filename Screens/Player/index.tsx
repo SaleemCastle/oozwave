@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Animated, Easing, Pressable, StatusBar, TouchableOpacity, View } from 'react-native'
+import { Animated, Easing, Image, Pressable, StatusBar, TouchableOpacity, View } from 'react-native'
 import Slider from '@react-native-community/slider'
 import TrackPlayer, { State, usePlaybackState, useProgress } from 'react-native-track-player'
 import Icon from 'react-native-vector-icons/Feather'
@@ -80,7 +80,9 @@ const Player = ({ navigation }: PlayerProps) => {
     const [sliderValue, setSliderValue] = useState(0)
     const [isSeeking, setIsSeeking] = useState(false)
 
-    const isPlaying = playbackState === State.Playing
+    const [requestedState, setRequestedState] = useState<null | 'playing' | 'paused'>(null)
+    const isPlayingNative = playbackState === State.Playing
+    const isPlaying = requestedState ? requestedState === 'playing' : isPlayingNative
     const totalDurationMs = currentQueueItem?.duration ?? 0
     const totalDurationSeconds = totalDurationMs / 1000
     const sliderMax = useMemo(() => {
@@ -103,9 +105,7 @@ const Player = ({ navigation }: PlayerProps) => {
         }
     }, [currentQueueItem])
 
-    useEffect(() => {
-        dispatch(setCurrentPlayerState(playbackState.toString()))
-    }, [dispatch, playbackState])
+    // PlayerStateSync already mirrors native playback state to Redux; avoid duplicate dispatches here
 
     useEffect(() => {
         if (!currentQueueItem) {
@@ -130,6 +130,7 @@ const Player = ({ navigation }: PlayerProps) => {
 
     const handlePlay = useCallback(async () => {
         try {
+            setRequestedState('playing')
             await TrackPlayer.play()
         } catch (error) {
             console.warn('Unable to play track', error)
@@ -138,6 +139,7 @@ const Player = ({ navigation }: PlayerProps) => {
 
     const handlePause = useCallback(async () => {
         try {
+            setRequestedState('paused')
             await TrackPlayer.pause()
         } catch (error) {
             console.warn('Unable to pause track', error)
@@ -181,6 +183,14 @@ const Player = ({ navigation }: PlayerProps) => {
         [dispatch],
     )
 
+    // Clear optimistic state when native playback matches
+    useEffect(() => {
+        if (!requestedState) return
+        if ((requestedState === 'playing' && isPlayingNative) || (requestedState === 'paused' && !isPlayingNative)) {
+            setRequestedState(null)
+        }
+    }, [requestedState, isPlayingNative])
+
     useEffect(() => {
         return () => {
             if (currentPlayerState === 'stopped') {
@@ -213,13 +223,23 @@ const Player = ({ navigation }: PlayerProps) => {
                 <View style={{ marginHorizontal: 81, marginVertical: 60, borderRadius: 214 }}>
                     <Pressable onPress={ handleArtworkDoubleTap }>
                         { currentQueueItem ? (
-                            <CoverImage
-                                // @ts-ignore - library expects file path string
-                                source={ currentQueueItem.path }
-                                placeHolder={ Images.DefaultMusicIcon }
-                                width={ 214 }
-                                height={ 214 }
-                            />
+                            currentQueueItem.artwork ? (
+                                <Image
+                                    source={{ uri: currentQueueItem.artwork as any }}
+                                    style={{ width: 214, height: 214, borderRadius: 8 }}
+                                    resizeMode='cover'
+                                />
+                            ) : (
+                                <CoverImage
+                                    // Pass device file path so vendor can resolve cached cover
+                                    //@ts-ignore
+                                    src={ currentQueueItem.path }
+                                    placeHolder={ Images.DefaultMusicIcon }
+                                    width={ 214 }
+                                    height={ 214 }
+                                    resizeMode='cover'
+                                />
+                            )
                         ) : (
                             <PlaceholderArtwork>
                                 <Icon name='music' size={ 72 } color={ Colors.grey4 } />
@@ -298,9 +318,9 @@ const Player = ({ navigation }: PlayerProps) => {
                             opacity: currentQueueItem ? 1 : 0.5,
                         }}
                     >
-                        <TouchableOpacity onPress={ handleSkipPrevious } disabled={ !currentQueueItem } style={{ marginLeft: 24 }}>
-                            <McImage source={ Images.back } />
-                        </TouchableOpacity>
+                        <IconButton onPress={ handleSkipPrevious } disabled={ !currentQueueItem } style={{ marginLeft: 24 }}>
+                            <Icon name='skip-back' size={ 16 } color={ Colors.grey4 } />
+                        </IconButton>
 
                         <View
                             style={{
@@ -315,14 +335,14 @@ const Player = ({ navigation }: PlayerProps) => {
                             <PlayButton
                                 size={ 70 }
                                 circle={ 62.82 }
-                                icon={ isPlaying ? Images.pause : Images.play }
+                                icon={ isPlaying ? "pause" : "play" }
                                 onPress={ currentQueueItem ? (isPlaying ? handlePause : handlePlay) : undefined }
                             />
                         </View>
 
-                        <TouchableOpacity onPress={ handleSkipNext } disabled={ !currentQueueItem } style={{ marginRight: 24 }}>
-                            <McImage source={ Images.next } />
-                        </TouchableOpacity>
+                        <IconButton onPress={ handleSkipNext } disabled={ !currentQueueItem } style={{ marginRight: 24 }}>
+                            <Icon name='skip-forward' size={ 16 } color={ Colors.grey4 } />
+                        </IconButton>
                     </View>
                 </View>
 

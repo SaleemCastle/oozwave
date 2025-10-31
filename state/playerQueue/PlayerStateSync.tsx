@@ -35,7 +35,12 @@ const PlayerStateSync: React.FC = () => {
     }, [dispatch, playbackState])
 
     useEffect(() => {
-        dispatch(setQueuePosition(progress.position))
+        const last = (queueRef.current?.position ?? 0) as number
+        const next = progress.position || 0
+        if (Math.abs(next - last) < 0.5) {
+            return
+        }
+        dispatch(setQueuePosition(next))
     }, [dispatch, progress.position])
 
     // Simple end-of-track fade-out to simulate crossfade (no overlap)

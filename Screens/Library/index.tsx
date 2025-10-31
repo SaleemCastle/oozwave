@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
 import {
   View,
   FlatList,
@@ -98,7 +98,9 @@ const Library: React.FC<LibraryProps> = ({ navigation }) => {
   const playlists = useAppSelector(selectSortedAndFilteredPlaylists)
 
   const [section, setSection] = useState<SectionKey>('Playlists')
+  const [isPendingSection, startSectionTransition] = useTransition()
   const [query, setQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
   const [soundMatch, setSoundMatch] = useState(true)
   const [songSort, setSongSort] = useState<SongSort>('alpha')
   const [collectionSort, setCollectionSort] = useState<'alpha' | 'size' | 'recent'>('alpha')
@@ -126,6 +128,12 @@ const Library: React.FC<LibraryProps> = ({ navigation }) => {
     AsyncStorage.setItem(STORAGE_KEYS.search(section), query).catch(() => {})
   }, [query, section])
 
+  // Debounce query to avoid recompute on every keystroke
+  useEffect(() => {
+    const h = setTimeout(() => setDebouncedQuery(query), 150)
+    return () => clearTimeout(h)
+  }, [query])
+
   const handleCreatePlaylist = useCallback(() => {
     navigation.navigate('PlaylistEditor', { mode: 'create' })
   }, [navigation])
@@ -139,8 +147,8 @@ const Library: React.FC<LibraryProps> = ({ navigation }) => {
   }, [])
 
   const filteredTracks: ITrack[] = useMemo(() => {
-    if (!query.trim()) return tracks
-    const q = query.trim()
+    if (!debouncedQuery.trim()) return tracks
+    const q = debouncedQuery.trim()
     return tracks.filter((t) => {
       const fields = [t.title, t.artist, t.album].filter(Boolean) as string[]
       if (soundMatch) {
@@ -149,7 +157,7 @@ const Library: React.FC<LibraryProps> = ({ navigation }) => {
       const lq = q.toLowerCase()
       return fields.some((f) => f.toLowerCase().includes(lq))
     })
-  }, [query, soundMatch, tracks])
+  }, [debouncedQuery, soundMatch, tracks])
 
   const sortedTracks = useMemo(() => {
     const arr = [...filteredTracks]
@@ -307,7 +315,7 @@ const Library: React.FC<LibraryProps> = ({ navigation }) => {
   const renderTabs = () => (
     <TabsRow>
       {(['Playlists', 'Songs', 'Albums', 'Artists'] as SectionKey[]).map((key) => (
-        <TabPill key={key} active={section === key} onPress={() => { LayoutAnimation.easeInEaseOut(); setSection(key) }}>
+        <TabPill key={key} active={section === key} onPress={() => { LayoutAnimation.easeInEaseOut(); startSectionTransition(() => setSection(key)) }}>
           <McText medium size={12} color={section === key ? Colors.white : Colors.grey4}>{key}</McText>
         </TabPill>
       ))}
@@ -547,10 +555,16 @@ const Library: React.FC<LibraryProps> = ({ navigation }) => {
       )}
 
       {section === 'Songs' && (
-        <FlatList
+        <FlatList 
           data={sortedTracks}
           keyExtractor={(t) => String(t.id)}
           contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 120 }}
+          initialNumToRender={12}
+          windowSize={12}
+          maxToRenderPerBatch={12}
+          updateCellsBatchingPeriod={50}
+          removeClippedSubviews
+          getItemLayout={(_, index) => ({ length: 62, offset: 62 * index, index })}
           ListHeaderComponent={<View>{renderHeaderCommon()}{renderMemoryLane()}</View>}
           renderItem={({ item }) => (
             <SongRow onPress={() => handleSongRowPress(item)} onLongPress={() => setConfirm({ visible: true, title: 'Offline', message: 'Make song available offline?', onConfirm: () => toggleOffline('tracks', String(item.id)) })}>
@@ -574,10 +588,15 @@ const Library: React.FC<LibraryProps> = ({ navigation }) => {
       )}
 
       {section === 'Albums' && (
-        <FlatList
+        <FlatList 
           data={albums}
           keyExtractor={(a) => a.album}
           contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 120 }}
+          initialNumToRender={8}
+          windowSize={8}
+          maxToRenderPerBatch={8}
+          updateCellsBatchingPeriod={50}
+          removeClippedSubviews
           ListHeaderComponent={renderHeaderCommon()}
           numColumns={2}
           columnWrapperStyle={{ justifyContent: 'space-between' }}
@@ -604,10 +623,15 @@ const Library: React.FC<LibraryProps> = ({ navigation }) => {
       )}
 
       {section === 'Artists' && (
-        <FlatList
+        <FlatList 
           data={artists}
           keyExtractor={(a) => a.artist}
           contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 120 }}
+          initialNumToRender={10}
+          windowSize={10}
+          maxToRenderPerBatch={10}
+          updateCellsBatchingPeriod={50}
+          removeClippedSubviews
           ListHeaderComponent={renderHeaderCommon()}
           renderItem={({ item }) => (
             <ArtistRow

@@ -340,6 +340,14 @@ export const skipToNext = createAsyncThunk<void, void, { state: RootState }>(
             return
         }
 
+        // Optimistically update UI index to feel instant
+        const { currentIndex, queue, repeatMode } = state.playerQueue
+        const optimisticNext = currentIndex < queue.length - 1 ? currentIndex + 1 : (repeatMode === 'queue' ? 0 : currentIndex)
+        if (optimisticNext !== currentIndex) {
+            dispatch(setCurrentIndex(optimisticNext))
+            dispatch(setPosition(0))
+        }
+
         await ensureTrackPlayerReady()
         const playbackState = await TrackPlayer.getState()
         const wasPlaying = playbackState === TrackPlayerState.Playing
@@ -347,9 +355,8 @@ export const skipToNext = createAsyncThunk<void, void, { state: RootState }>(
         try {
             await TrackPlayer.skipToNext()
         } catch (error) {
-            const { repeatMode } = state.playerQueue
-            if (repeatMode === 'queue') {
-                const firstId = state.playerQueue.queue[0]?.id
+            if (repeatMode === 'queue' && queue.length > 0) {
+                const firstId = queue[0]?.id
                 if (firstId) {
                     await TrackPlayer.skip(+firstId)
                 }
@@ -363,24 +370,7 @@ export const skipToNext = createAsyncThunk<void, void, { state: RootState }>(
             await TrackPlayer.pause()
         }
 
-        const pointer = await TrackPlayer.getCurrentTrack()
-        const queue = state.playerQueue.queue
-        let nextIndex: number | null = null
-
-        if (typeof pointer === 'number') {
-            nextIndex = pointer
-        } else {
-            const currentId = normalizeTrackId(pointer)
-            if (currentId) {
-                nextIndex = queue.findIndex((item) => item.id === currentId)
-            }
-        }
-
-        if (nextIndex !== null && nextIndex >= 0 && nextIndex < queue.length) {
-            dispatch(setCurrentIndex(nextIndex))
-            dispatch(setPosition(0))
-            dispatch(persistQueueToStorage())
-        }
+        dispatch(persistQueueToStorage())
     },
 )
 
@@ -406,10 +396,17 @@ export const skipToPrevious = createAsyncThunk<void, void, { state: RootState }>
             return
         }
 
+        // Optimistically update UI index to feel instant
+        const { currentIndex, queue, repeatMode } = state.playerQueue
+        const optimisticPrev = currentIndex > 0 ? currentIndex - 1 : (repeatMode === 'queue' ? Math.max(0, queue.length - 1) : currentIndex)
+        if (optimisticPrev !== currentIndex) {
+            dispatch(setCurrentIndex(optimisticPrev))
+            dispatch(setPosition(0))
+        }
+
         try {
             await TrackPlayer.skipToPrevious()
         } catch (error) {
-            const { repeatMode, queue } = state.playerQueue
             if (repeatMode === 'queue' && queue.length > 0) {
                 const lastId = queue[queue.length - 1]?.id
                 if (lastId) {
@@ -425,24 +422,7 @@ export const skipToPrevious = createAsyncThunk<void, void, { state: RootState }>
             await TrackPlayer.pause()
         }
 
-        const pointer = await TrackPlayer.getCurrentTrack()
-        const queue = state.playerQueue.queue
-        let targetIndex: number | null = null
-
-        if (typeof pointer === 'number') {
-            targetIndex = pointer
-        } else {
-            const currentId = normalizeTrackId(pointer)
-            if (currentId) {
-                targetIndex = queue.findIndex((item) => item.id === currentId)
-            }
-        }
-
-        if (targetIndex !== null && targetIndex >= 0 && targetIndex < queue.length) {
-            dispatch(setCurrentIndex(targetIndex))
-            dispatch(setPosition(0))
-            dispatch(persistQueueToStorage())
-        }
+        dispatch(persistQueueToStorage())
     },
 )
 

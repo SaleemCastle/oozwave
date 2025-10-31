@@ -192,7 +192,7 @@ const Billboards = ({ route }: BillboardsProps) => {
         <Container>
             {isLoading ? (
                 <View style={{ flex: 1, justifyContent: 'center' }}>
-                    <AnimatedPlayButton size={78} circle={70} />
+                    <AnimatedPlayButton icon="long-arrow-alt-right" size={78} circle={70} />
                 </View>
             ) : (
                 <Animated.FlatList

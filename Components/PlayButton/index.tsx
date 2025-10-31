@@ -1,6 +1,6 @@
 ﻿import React, { useEffect, useMemo, useRef } from 'react'
 import { Animated, ImageSourcePropType, TouchableOpacity } from 'react-native'
-import Icon from 'react-native-vector-icons/FontAwesome'
+import Icon from 'react-native-vector-icons/Feather'
 import styled from 'styled-components'
 import LinearGradient from 'react-native-linear-gradient'
 
@@ -13,14 +13,15 @@ const end = { x: 1, y: 0 }
 interface IProps {
   size?: number 
   circle?: number
-  icon?: ImageSourcePropType
+  icon?: string
+  iconSize?: number
   onPress?: () => void
 }
 
 const AnimatedGradient = Animated.createAnimatedComponent(LinearGradient)
 
 const PlayButton = (props: IProps): React.ReactElement => {
-    const { size, circle, icon, onPress } = props
+    const { size, circle, icon, onPress, iconSize } = props
     const pulseValues = useRef([0, 1, 2].map(() => new Animated.Value(0))).current
 
     useEffect(() => {
@@ -62,8 +63,8 @@ const PlayButton = (props: IProps): React.ReactElement => {
         <Container size={ size } onPress={ onPress }>
             {
                 icon
-                    ? <McImage source={ icon } style={{ position: 'relative', zIndex: 1 }}/>
-                    : <Icon name="play" size={ 30 } color="#fff" style={{ position: 'relative', zIndex: 1 }}/>
+                    ? <Icon name={icon} size={ iconSize ?? 30 } color="#fff" style={{ position: 'relative', zIndex: 1 }}/>
+                    : null
             }
             {
                 circleStyles.map(({ style }, index) => {

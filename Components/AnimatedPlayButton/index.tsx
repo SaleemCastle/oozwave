@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing } from 'react-native';
 import { View, Text, ImageSourcePropType, TouchableOpacity } from 'react-native';
-import Icon from 'react-native-vector-icons/FontAwesome';
+import Icon from 'react-native-vector-icons/FontAwesome5';
 import styled from 'styled-components';
 import LinearGradient from 'react-native-linear-gradient';
 
@@ -14,7 +14,7 @@ const end = { x: 1, y: 0 };
 interface IProps {
     size?: number;
     circle?: number;
-    icon?: ImageSourcePropType;
+    icon?: string;
     onPress?: () => void;
 }
 
@@ -71,8 +71,11 @@ const AnimatedPlayButton = (props: IProps): React.ReactElement => {
 
     return (
         <Container size={size} onPress={onPress}>
-            <McImage source={icon ?? (defaultIcon as ImageSourcePropType)} style={{ position: 'relative', zIndex: 1 }} />
-
+            {/* <McImage source={icon ?? (defaultIcon as ImageSourcePropType)} style={{ position: 'relative', zIndex: 1 }} /> */}
+            {
+                icon 
+                    ? <Icon name={icon} size={ 30 } color="#fff" style={{ position: 'relative', zIndex: 1 }}/> : defaultIcon
+            }
             <AnimatedCircle
                 colors={Colors.linearGradient1}
                 size={size}

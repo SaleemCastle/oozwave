@@ -222,9 +222,9 @@ const Onboarding = ({ navigation }: OnboardingProps) => {
 
         while (true) {
             const resp = await MusicFiles.getAll({
-                // Fetch embedded covers at a modest quality to enable caching/persistence
+                // Fetch embedded covers at higher quality to prevent pixelation in Player
                 cover: true,
-                coverQuality: 40,
+                coverQuality: 80,
                 batchSize: PAGE_SIZE,
                 batchNumber: page,
                 minimumSongDuration: 60 * 1000,
@@ -345,7 +345,7 @@ const Onboarding = ({ navigation }: OnboardingProps) => {
                             <PlayButton
                                 size={ 78 }
                                 circle={ 70 }
-                                icon={ Images.arrowRight }
+                                icon={ "play" }
                                 onPress={ handleScanPress }
                             />
                         )
