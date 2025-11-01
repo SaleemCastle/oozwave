@@ -1,14 +1,13 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Animated, Easing, Image, Pressable, StatusBar, TouchableOpacity, View } from 'react-native'
 import Slider from '@react-native-community/slider'
-import TrackPlayer, { State, usePlaybackState, useProgress } from 'react-native-track-player'
+import TrackPlayer, { Event, State, usePlaybackState, useProgress, useTrackPlayerEvents } from 'react-native-track-player'
 import Icon from 'react-native-vector-icons/Feather'
 import MCIcon from 'react-native-vector-icons/MaterialCommunityIcons'
 import styled from 'styled-components/native'
 
 import { Colors, Images } from '../../Constants'
 import { setCurrentTrack, ITrack } from '../../Store/Actions/currentTrack.actions'
-import { setCurrentPlayerState } from '../../Store/Actions/playerState.actions'
 import { McText, McImage, PlayButton } from '../../Components'
 import { PlayerProps } from '../../types'
 import { useAppDispatch, useAppSelector } from '../../hooks/reduxHooks'
@@ -40,10 +39,9 @@ const formatDuration = (ms: number) => {
 const Player = ({ navigation }: PlayerProps) => {
     const dispatch = useAppDispatch()
     const playbackState = usePlaybackState()
-    const progress = useProgress(0.5)
+    const progress = useProgress(0.1)
     const currentQueueItem = useAppSelector(selectCurrentQueueItem)
     const playbackMeta = useAppSelector(selectPlaybackMeta)
-    const currentPlayerState = useAppSelector((state) => state.currentPlayerState.playerState)
     const libraryTracks = useAppSelector((state) => state.tracks as ITrack[])
     const isFavorite = useAppSelector(selectIsFavoriteById(currentQueueItem?.id))
 
@@ -79,10 +77,15 @@ const Player = ({ navigation }: PlayerProps) => {
 
     const [sliderValue, setSliderValue] = useState(0)
     const [isSeeking, setIsSeeking] = useState(false)
+    const seekingTargetRef = useRef<number | null>(null)
+    const [isTransitioningTrack, setIsTransitioningTrack] = useState(false)
+    const wasPlayingRef = useRef<boolean>(false)
+    const animatedProgressRef = useRef(new Animated.Value(0))
 
     const [requestedState, setRequestedState] = useState<null | 'playing' | 'paused'>(null)
     const isPlayingNative = playbackState === State.Playing
     const isPlaying = requestedState ? requestedState === 'playing' : isPlayingNative
+
     const totalDurationMs = currentQueueItem?.duration ?? 0
     const totalDurationSeconds = totalDurationMs / 1000
     const sliderMax = useMemo(() => {
@@ -93,20 +96,15 @@ const Player = ({ navigation }: PlayerProps) => {
         return sliderValue > 0 ? sliderValue : 1
     }, [progress.duration, totalDurationSeconds, sliderValue])
 
+    // Clear optimistic play/pause override when native state matches
     useEffect(() => {
-        if (!isSeeking) {
-            setSliderValue(progress.position)
+        if (!requestedState) return
+        if ((requestedState === 'playing' && isPlayingNative) || (requestedState === 'paused' && playbackState === State.Paused)) {
+            setRequestedState(null)
         }
-    }, [isSeeking, progress.position])
+    }, [requestedState, isPlayingNative, playbackState])
 
-    useEffect(() => {
-        if (!currentQueueItem) {
-            setSliderValue(0)
-        }
-    }, [currentQueueItem])
-
-    // PlayerStateSync already mirrors native playback state to Redux; avoid duplicate dispatches here
-
+    // Keep currentTrack in Redux in sync with queue item
     useEffect(() => {
         if (!currentQueueItem) {
             return
@@ -128,12 +126,45 @@ const Player = ({ navigation }: PlayerProps) => {
         }))
     }, [currentQueueItem, dispatch, libraryTracks])
 
+    // Bridge Animated value to Slider value
+    useEffect(() => {
+        const sub = animatedProgressRef.current.addListener(({ value }) => setSliderValue(value))
+        return () => {
+            animatedProgressRef.current.removeListener(sub)
+        }
+    }, [])
+
+    // Smoothly interpolate towards latest native position
+    useEffect(() => {
+        const current = progress.position
+        const target = seekingTargetRef.current
+        if (target !== null) {
+            if (Math.abs(current - target) <= 0.05) {
+                seekingTargetRef.current = null
+                setIsSeeking(false)
+            } else {
+                animatedProgressRef.current.stopAnimation()
+                animatedProgressRef.current.setValue(target)
+                setSliderValue(target)
+                return
+            }
+        }
+        if (!isSeeking) {
+            Animated.timing(animatedProgressRef.current, {
+                toValue: current,
+                duration: 120,
+                easing: Easing.linear,
+                useNativeDriver: false,
+            }).start()
+        }
+    }, [isSeeking, progress.position])
+
     const handlePlay = useCallback(async () => {
         try {
             setRequestedState('playing')
             await TrackPlayer.play()
         } catch (error) {
-            console.warn('Unable to play track', error)
+            // ignore
         }
     }, [])
 
@@ -142,17 +173,29 @@ const Player = ({ navigation }: PlayerProps) => {
             setRequestedState('paused')
             await TrackPlayer.pause()
         } catch (error) {
-            console.warn('Unable to pause track', error)
+            // ignore
         }
     }, [])
 
     const handleSkipNext = useCallback(() => {
+        wasPlayingRef.current = isPlayingNative
+        setIsTransitioningTrack(true)
+        seekingTargetRef.current = 0
+        animatedProgressRef.current.stopAnimation()
+        animatedProgressRef.current.setValue(0)
+        setSliderValue(0)
         dispatch(skipToNext())
-    }, [dispatch])
+    }, [dispatch, isPlayingNative])
 
     const handleSkipPrevious = useCallback(() => {
+        wasPlayingRef.current = isPlayingNative
+        setIsTransitioningTrack(true)
+        seekingTargetRef.current = 0
+        animatedProgressRef.current.stopAnimation()
+        animatedProgressRef.current.setValue(0)
+        setSliderValue(0)
         dispatch(skipToPrevious())
-    }, [dispatch])
+    }, [dispatch, isPlayingNative])
 
     const handleToggleShuffle = useCallback(() => {
         dispatch(toggleShuffle())
@@ -163,47 +206,48 @@ const Player = ({ navigation }: PlayerProps) => {
     }, [dispatch])
 
     const handleSliderValueChange = useCallback((value: number) => {
+        animatedProgressRef.current.stopAnimation()
+        animatedProgressRef.current.setValue(value)
         setSliderValue(value)
     }, [])
 
     const handleSlidingStart = useCallback(() => {
         setIsSeeking(true)
+        seekingTargetRef.current = null
+        animatedProgressRef.current.stopAnimation()
     }, [])
 
     const handleSlidingComplete = useCallback(
         async (value: number) => {
-            setIsSeeking(false)
+            seekingTargetRef.current = value
+            animatedProgressRef.current.stopAnimation()
+            animatedProgressRef.current.setValue(value)
+            setSliderValue(value)
             try {
                 await TrackPlayer.seekTo(value)
                 dispatch(setQueuePosition(value))
             } catch (error) {
-                console.warn('Unable to seek', error)
+                seekingTargetRef.current = null
+                setIsSeeking(false)
             }
         },
         [dispatch],
     )
 
-    // Clear optimistic state when native playback matches
-    useEffect(() => {
-        if (!requestedState) return
-        if ((requestedState === 'playing' && isPlayingNative) || (requestedState === 'paused' && !isPlayingNative)) {
-            setRequestedState(null)
-        }
-    }, [requestedState, isPlayingNative])
-
-    useEffect(() => {
-        return () => {
-            if (currentPlayerState === 'stopped') {
-                TrackPlayer.reset()
-            }
-        }
-    }, [currentPlayerState])
+    // Track change event clears transition state
+    useTrackPlayerEvents([Event.PlaybackTrackChanged], (e) => {
+        if (e.type !== Event.PlaybackTrackChanged) return
+        setIsTransitioningTrack(false)
+        seekingTargetRef.current = null
+        animatedProgressRef.current.stopAnimation()
+        animatedProgressRef.current.setValue(0)
+        setSliderValue(0)
+    })
 
     const shuffleActive = playbackMeta.isShuffle
     const repeatMode = playbackMeta.repeatMode
     const repeatIcon = repeatMode === 'track' ? 'repeat-1' : 'repeat'
     const repeatActive = repeatMode !== 'off'
-
     const leftMeta = currentQueueItem?.artist ?? 'Unknown artist'
     const playingTitle = currentQueueItem?.title ?? 'Nothing playing'
 
@@ -213,10 +257,9 @@ const Player = ({ navigation }: PlayerProps) => {
 
             <HeaderSection>
                 <TouchableOpacity onPress={() => { navigation.goBack() }}>
-                    <McImage source={ Images.chevronWhite } />
+                    <Icon name='chevron-left' size={ 22 } color={ Colors.grey4 } />
                 </TouchableOpacity>
-
-                <McImage source={ Images.more } />
+                <Icon name='more-horizontal' size={ 22 } color={ Colors.grey4 } />
             </HeaderSection>
 
             <MusicDetailSection>
@@ -230,14 +273,11 @@ const Player = ({ navigation }: PlayerProps) => {
                                     resizeMode='cover'
                                 />
                             ) : (
-                                <CoverImage
-                                    // Pass device file path so vendor can resolve cached cover
-                                    //@ts-ignore
+                                <CoverImage //@ts-ignore
                                     src={ currentQueueItem.path }
                                     placeHolder={ Images.DefaultMusicIcon }
                                     width={ 214 }
                                     height={ 214 }
-                                    resizeMode='cover'
                                 />
                             )
                         ) : (
@@ -245,17 +285,14 @@ const Player = ({ navigation }: PlayerProps) => {
                                 <Icon name='music' size={ 72 } color={ Colors.grey4 } />
                             </PlaceholderArtwork>
                         ) }
-                        {/* Persistent like control at bottom-right */}
                         <View style={{ position: 'absolute', right: 8, bottom: 8 }}>
                             <TouchableOpacity onPress={ handleToggleFavorite } hitSlop={ 12 } accessibilityRole='button' accessibilityLabel={ isFavorite ? 'Remove from favorites' : 'Add to favorites' }>
-                                {/* Filled heart with white outline, Airbnb-like */}
                                 <View>
                                     <MCIcon name='heart' size={22} color={ isFavorite ? colors.neonMagenta : 'rgba(180,180,180,0.8)' } style={{ position: 'absolute' }} />
                                     <MCIcon name='heart-outline' size={22} color={ '#FFFFFF' } />
                                 </View>
                             </TouchableOpacity>
                         </View>
-                        {/* Airbnb-like animated heart overlay */}
                         <Animated.View
                             pointerEvents='none'
                             style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', opacity: heartOpacity, transform: [{ scale: heartScale }] }}
@@ -288,7 +325,6 @@ const Player = ({ navigation }: PlayerProps) => {
                     onSlidingComplete={ handleSlidingComplete }
                     disabled={ !currentQueueItem }
                 />
-                
             </SliderSection>
 
             <TimeSection>
@@ -335,7 +371,7 @@ const Player = ({ navigation }: PlayerProps) => {
                             <PlayButton
                                 size={ 70 }
                                 circle={ 62.82 }
-                                icon={ isPlaying ? "pause" : "play" }
+                                icon={ isPlaying ? 'pause' : 'play' }
                                 onPress={ currentQueueItem ? (isPlaying ? handlePause : handlePlay) : undefined }
                             />
                         </View>
@@ -416,3 +452,4 @@ const PlaceholderArtwork = styled.View`
 `
 
 export default Player
+

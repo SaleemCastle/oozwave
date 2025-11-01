@@ -117,7 +117,6 @@ const styles = StyleSheet.create({
         borderTopLeftRadius: radii.pill,
         borderBottomLeftRadius: radii.pill,
         ...shadows.neonPill,
-        zIndex:999
     },
     headerRow: {
         flexDirection: 'row',
