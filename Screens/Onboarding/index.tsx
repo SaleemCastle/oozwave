@@ -6,7 +6,7 @@ import styled from 'styled-components/native'
 import { Colors, Images } from '../../Constants'
 import { McText, McImage, PlayButton } from '../../Components'
 import WaveformLoader from '../../Components/shared/WaveformLoader'
-import TrackPlayer, { AppKilledPlaybackBehavior, Capability } from 'react-native-track-player'
+// TrackPlayer options are configured globally; no direct import needed here
 import { checkPermissions } from '../../services/requestPermissions'
 import { OnboardingProps, PermissionStatus } from '../../types'
 import { useAppDispatch, useAppSelector } from '../../hooks/reduxHooks'
@@ -36,27 +36,7 @@ const Onboarding = ({ navigation }: OnboardingProps) => {
     const scanRequestTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const didAutoRedirectRef = useRef(false)
 
-    useEffect(() => {
-        TrackPlayer.updateOptions({
-            android: {
-                appKilledPlaybackBehavior:
-                AppKilledPlaybackBehavior.StopPlaybackAndRemoveNotification,
-            },
-            capabilities: [
-                Capability.Play,
-                Capability.Pause,
-                Capability.SkipToNext,
-                Capability.SkipToPrevious,
-                Capability.SeekTo,
-            ],
-            compactCapabilities: [
-                Capability.Play,
-                Capability.Pause,
-                Capability.SkipToNext,
-            ],
-            progressUpdateEventInterval: 1,
-        })
-    }, [])
+    // Player options configured globally in App.tsx
     
     useEffect(() => {
         checkPermissions()

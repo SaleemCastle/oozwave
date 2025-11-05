@@ -31,4 +31,25 @@ module.exports = async function() {
         TrackPlayer.destroy()
     });
 
+    // Seek/jump controls from notification/lock screen
+    TrackPlayer.addEventListener('remote-jump-forward', async ({ interval }) => {
+        try {
+            const pos = await TrackPlayer.getPosition()
+            await TrackPlayer.seekTo(pos + (interval || 15))
+        } catch {}
+    })
+
+    TrackPlayer.addEventListener('remote-jump-backward', async ({ interval }) => {
+        try {
+            const pos = await TrackPlayer.getPosition()
+            await TrackPlayer.seekTo(Math.max(0, pos - (interval || 15)))
+        } catch {}
+    })
+
+    TrackPlayer.addEventListener('remote-seek', async ({ position }) => {
+        try {
+            await TrackPlayer.seekTo(position)
+        } catch {}
+    })
+
 };

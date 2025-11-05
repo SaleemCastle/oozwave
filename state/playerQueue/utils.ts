@@ -2,6 +2,7 @@
 
 import { ITrack } from '../../Store/Actions/currentTrack.actions'
 import { QueueItem } from './playerQueueTypes'
+import { Images } from '../../Constants'
 
 export const normalizeTrackId = (id: string | number | null | undefined): string | null => {
     if (id === null || id === undefined) {
@@ -52,7 +53,7 @@ export const queueItemToTrackPlayer = (item: QueueItem): Track => ({
     artist: item.artist,
     album: item.album,
     duration: item.duration ? item.duration / 1000 : undefined,
-    artwork: item.artwork,
+    artwork: item.artwork ?? (Images.musicIcon as unknown as number),
 })
 
 export const buildQueueFromTrackIds = (trackIds: string[], libraryTracks: ITrack[]): QueueItem[] => {
