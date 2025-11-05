@@ -51,6 +51,8 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>This app needs access to your music library to play local audio files.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>GentiumBookBasic-Italic.ttf</string>

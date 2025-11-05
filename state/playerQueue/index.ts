@@ -8,6 +8,7 @@ import type { RootState } from '../../Store/store'
 import {
     appendQueueItem,
     insertQueueItem,
+    removeQueueItem,
     markInitialized,
     setCurrentIndex,
     setOriginalQueue,
@@ -85,6 +86,19 @@ const ensureTrackPlayerReady = async () => {
         }
     } catch (error) {
         await TrackPlayer.setupPlayer()
+    }
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+const fadeVolume = async (from: number, to: number, durationMs: number) => {
+    const steps = Math.max(1, Math.min(48, Math.round(durationMs / 30)))
+    const stepMs = durationMs / steps
+    const delta = (to - from) / steps
+    for (let i = 1; i <= steps; i += 1) {
+        const v = from + delta * i
+        try { await TrackPlayer.setVolume(Math.max(0, Math.min(1.5, v))) } catch {}
+        if (i < steps) await sleep(stepMs)
     }
 }
 
@@ -217,6 +231,11 @@ export const startPlaylistPlayback = createAsyncThunk<void, StartPlaylistPayload
                     : 0
         const safeStartPosition = Number.isFinite(parsedStartPosition) && parsedStartPosition > 0 ? parsedStartPosition : 0
 
+        // Optimistic UI update first so Player shows the right track instantly
+        dispatch(setOriginalQueue(baseQueue))
+        dispatch(setQueue({ queue: effectiveQueue, playlistId, currentIndex: effectiveIndex, preserveOriginal: true }))
+        dispatch(setPosition(safeStartPosition))
+
         await ensureTrackPlayerReady()
         await TrackPlayer.reset()
         const CHUNK_SIZE = getAdaptiveChunkSize(effectiveQueue.length)
@@ -232,9 +251,6 @@ export const startPlaylistPlayback = createAsyncThunk<void, StartPlaylistPayload
         await applyRepeatMode(repeatMode)
         await TrackPlayer.play()
 
-        dispatch(setOriginalQueue(baseQueue))
-        dispatch(setQueue({ queue: effectiveQueue, playlistId, currentIndex: effectiveIndex, preserveOriginal: true }))
-        dispatch(setPosition(safeStartPosition))
         dispatch(persistQueueToStorage())
 
         for (let i = firstChunkSize; i < effectiveQueue.length; i += CHUNK_SIZE) {
@@ -261,16 +277,16 @@ export const playTracksNow = createAsyncThunk<void, QueueItem[], { state: RootSt
         const firstChunkSize = Math.min(queueItems.length, CHUNK_SIZE)
         const firstChunk = queueItems.slice(0, firstChunkSize)
 
+        // Optimistic UI update first to avoid showing the previous song
+        dispatch(setOriginalQueue(queueItems))
+        dispatch(setQueue({ queue: queueItems, currentIndex: 0 }))
+        dispatch(setPosition(0))
+
         await ensureTrackPlayerReady()
         await TrackPlayer.reset()
         await TrackPlayer.add(firstChunk.map(queueItemToTrackPlayer))
         await applyRepeatMode(repeatMode)
         await TrackPlayer.play()
-
-        // Reflect intended full queue in Redux immediately to keep UI consistent
-        dispatch(setOriginalQueue(queueItems))
-        dispatch(setQueue({ queue: queueItems, currentIndex: 0 }))
-        dispatch(setPosition(0))
         dispatch(persistQueueToStorage())
 
         // Add remaining items in background-friendly chunks to avoid large bridge payloads
@@ -300,13 +316,19 @@ export const enqueuePlayNext = createAsyncThunk<void, { trackId: string }, { sta
         await ensureTrackPlayerReady()
         const currentIndex = state.playerQueue.currentIndex
         const insertIndex = currentIndex < 0 ? 0 : currentIndex + 1
-        await TrackPlayer.add(queueItemToTrackPlayer(queueItem), insertIndex)
+        // Optimistic UI update
         dispatch(insertQueueItem({ index: insertIndex, item: queueItem }))
-        if (state.playerQueue.queue.length === 0) {
-            dispatch(setCurrentIndex(0))
-            await TrackPlayer.play()
+        try {
+            await TrackPlayer.add(queueItemToTrackPlayer(queueItem), insertIndex)
+            if (state.playerQueue.queue.length === 0) {
+                dispatch(setCurrentIndex(0))
+                await TrackPlayer.play()
+            }
+            dispatch(persistQueueToStorage())
+        } catch (error) {
+            console.warn('Failed to add Play Next item', error)
+            dispatch(removeQueueItem(queueItem.id))
         }
-        dispatch(persistQueueToStorage())
     },
 )
 
@@ -322,13 +344,19 @@ export const enqueueToQueue = createAsyncThunk<void, { trackId: string }, { stat
             return
         }
         await ensureTrackPlayerReady()
-        await TrackPlayer.add(queueItemToTrackPlayer(queueItem))
+        // Optimistic UI update
         dispatch(appendQueueItem({ item: queueItem }))
-        if (state.playerQueue.currentIndex === -1) {
-            dispatch(setCurrentIndex(0))
-            await TrackPlayer.play()
+        try {
+            await TrackPlayer.add(queueItemToTrackPlayer(queueItem))
+            if (state.playerQueue.currentIndex === -1) {
+                dispatch(setCurrentIndex(0))
+                await TrackPlayer.play()
+            }
+            dispatch(persistQueueToStorage())
+        } catch (error) {
+            console.warn('Failed to add to queue', error)
+            dispatch(removeQueueItem(queueItem.id))
         }
-        dispatch(persistQueueToStorage())
     },
 )
 
@@ -444,6 +472,9 @@ export const toggleShuffle = createAsyncThunk<void, void, { state: RootState }>(
         if (!isShuffle) {
             const sourceQueue = originalQueue.length ? originalQueue : queue
             const shuffled = shuffleQueue(sourceQueue, currentIndex >= 0 ? currentIndex : 0)
+            // Optimistic UI update before re-building the native queue
+            dispatch(setQueue({ queue: shuffled.queue, currentIndex: shuffled.currentIndex, preserveOriginal: true }))
+            dispatch(setShuffle(true))
             await TrackPlayer.reset()
             const CHUNK_SIZE = getAdaptiveChunkSize(shuffled.queue.length)
             const firstChunkSize = Math.min(shuffled.queue.length, Math.max(CHUNK_SIZE, shuffled.currentIndex + 1))
@@ -456,8 +487,6 @@ export const toggleShuffle = createAsyncThunk<void, void, { state: RootState }>(
             if (position > 0) {
                 await TrackPlayer.seekTo(position)
             }
-            dispatch(setQueue({ queue: shuffled.queue, currentIndex: shuffled.currentIndex, preserveOriginal: true }))
-            dispatch(setShuffle(true))
             for (let i = firstChunkSize; i < shuffled.queue.length; i += CHUNK_SIZE) {
                 const batch = shuffled.queue.slice(i, i + CHUNK_SIZE)
                 try {
@@ -470,6 +499,9 @@ export const toggleShuffle = createAsyncThunk<void, void, { state: RootState }>(
         } else {
             const activeIndex = currentIndex >= 0 ? currentIndex : 0
             const activeId = queue[activeIndex]?.id
+            // Optimistic UI update back to original order
+            dispatch(setQueue({ queue: originalQueue, currentIndex: 0 }))
+            dispatch(setShuffle(false))
             await TrackPlayer.reset()
             const CHUNK_SIZE = getAdaptiveChunkSize(originalQueue.length)
             let nextIndex = 0
@@ -487,7 +519,6 @@ export const toggleShuffle = createAsyncThunk<void, void, { state: RootState }>(
                 await TrackPlayer.seekTo(position)
             }
             dispatch(setQueue({ queue: originalQueue, currentIndex: nextIndex }))
-            dispatch(setShuffle(false))
             for (let i = firstChunkSize; i < originalQueue.length; i += CHUNK_SIZE) {
                 const batch = originalQueue.slice(i, i + CHUNK_SIZE)
                 try {

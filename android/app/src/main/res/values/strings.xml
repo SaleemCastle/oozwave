@@ -1,3 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">oozwaveMobile</string>
+    <string name="app_name">Oozwave</string>
+    <!-- Custom channel for React Native Track Player -->
+    <string name="rntp_temporary_channel_id">oozwave_playback</string>
+    <string name="rntp_temporary_channel_name">Oozwave Playback</string>
+    <!-- Used by KotlinAudio in RNTP for the notification channel name -->
+    <string name="playback_channel_name">Oozwave Music</string>
 </resources>
+

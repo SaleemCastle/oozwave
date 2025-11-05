@@ -5,6 +5,7 @@ import { Provider } from 'react-redux'
 
 import { AppNavigator } from './Navigation/index'
 import { store } from './Store/store'
+// import { initEqualizerThunk } from './src/state/equalizer/eqSlice'
 import { View, useColorScheme } from 'react-native'
 import { Colors, Images } from './Constants'
 import PlayerStateSync from './state/playerQueue/PlayerStateSync'
@@ -34,46 +35,39 @@ export default App
 TrackPlayer.registerPlaybackService(() => require('./services/TrackPlayer.service'))
 TrackPlayer.setupPlayer()
 
+// Equalizer initialization will be triggered later from UI to avoid
+// interacting with Android permission prompts during cold start.
+
 // Configure notification/lock-screen player UI and actions
 TrackPlayer.updateOptions({
-    android: {
-        appKilledPlaybackBehavior:  'stop-playback-and-remove-notification' as any,
-    },
-    // Notification action buttons
-    capabilities: [
-        // Full set supported by the app
-        // (notificationCapabilities/compactCapabilities control what actually shows)
-        Capability.Play,
-        Capability.Pause,
-        Capability.SkipToNext,
-        Capability.SkipToPrevious,
-        Capability.JumpForward,
-        Capability.JumpBackward,
-        Capability.SeekTo,
-    ],
-    notificationCapabilities: [
-        Capability.Play,
-        Capability.Pause,
-        Capability.SkipToNext,
-        Capability.SkipToPrevious,
-        Capability.JumpForward,
-        Capability.JumpBackward,
-    ],
-    compactCapabilities: [
-        Capability.Pause,
-        Capability.Play,
-        Capability.SkipToNext,
-    ],
-    forwardJumpInterval: 15,
-    backwardJumpInterval: 15,
-    progressUpdateEventInterval: 1,
-    // Icons and accent color for Android notification
-    icon: Images.musicIcon as any,
-    playIcon: Images.play as any,
-    pauseIcon: Images.pause as any,
-    nextIcon: Images.next as any,
-    previousIcon: Images.back as any,
-    color: 0xED1BA3,
+  android: {
+    appKilledPlaybackBehavior: 'stop-playback-and-remove-notification' as any,
+  },
+  capabilities: [
+    Capability.Play,
+    Capability.Pause,
+    Capability.SkipToNext,
+    Capability.SkipToPrevious,
+    Capability.JumpForward,
+    Capability.JumpBackward,
+    Capability.SeekTo,
+  ],
+  notificationCapabilities: [
+    Capability.Play,
+    Capability.Pause,
+    Capability.SkipToNext,
+    Capability.SkipToPrevious,
+    Capability.JumpForward,
+    Capability.JumpBackward,
+  ],
+  compactCapabilities: [Capability.Pause, Capability.Play, Capability.SkipToNext],
+  forwardJumpInterval: 15,
+  backwardJumpInterval: 15,
+  progressUpdateEventInterval: 1,
+  // For Android, notification icons must reference app drawable resources by name.
+  // The small icon falls back to the app icon if not provided.
+  icon: 'ic_notification_small',
+  color: 0xED1BA3,
 })
 if (typeof __DEV__ !== 'undefined' && __DEV__) {
     setTimeout(() => {

@@ -5,15 +5,14 @@ import { Platform } from 'react-native'
 import { store } from '../Store/store'
 
 const resolveAudioPermission = () => {
-    if (Platform.OS !== 'android') {
-        return PERMISSIONS.ANDROID.READ_MEDIA_AUDIO
+    if (Platform.OS === 'android') {
+        if ((Platform.Version as number) >= 33) {
+            return PERMISSIONS.ANDROID.READ_MEDIA_AUDIO
+        }
+        return PERMISSIONS.ANDROID.READ_EXTERNAL_STORAGE
     }
-
-    if (Platform.Version >= 33) {
-        return PERMISSIONS.ANDROID.READ_MEDIA_AUDIO
-    }
-
-    return PERMISSIONS.ANDROID.READ_EXTERNAL_STORAGE
+    // iOS: request Media Library (requires NSAppleMusicUsageDescription in Info.plist)
+    return PERMISSIONS.IOS.MEDIA_LIBRARY
 }
 
 export function checkPermissions () {
