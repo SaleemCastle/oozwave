@@ -232,7 +232,7 @@ const Onboarding = ({ navigation }: OnboardingProps) => {
                 }
                 const now = Date.now()
                 if (now - lastUiUpdate > 300) {
-                    setStatusMessage(`Scanning… ${all.length.toLocaleString()} tracks found`)
+                    setStatusMessage(`Scanning... ${all.length.toLocaleString()} tracks found`)
                     lastUiUpdate = now
                 }
                 await SLEEP(0)

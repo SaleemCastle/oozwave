@@ -25,7 +25,11 @@ public class MainApplication extends Application implements ReactApplication {
           List<ReactPackage> packages = new PackageList(this).getPackages();
           // Packages that cannot be autolinked yet can be added manually here, for example:
           // packages.add(new MyReactNativePackage());
-          packages.add(new com.oozwavemobile.equalizer.EqualizerPackage());
+          try {
+            packages.add(new com.oozwavemobile.equalizer.EqualizerPackage());
+          } catch (Throwable t) {
+            // If the equalizer package fails to load for any reason, don't crash the app
+          }
           return packages;
         }
 

@@ -402,127 +402,6 @@ const Library: React.FC<LibraryProps> = ({ navigation }) => {
     </View>
   )
 
-  const renderPlaylists = () => (
-    <FlashList
-      style={{ marginTop: 8 }}
-      contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 120 }}
-      estimatedItemSize={180}
-      numColumns={2}
-      data={playlists}
-      keyExtractor={(pl) => pl.id}
-      ListEmptyComponent={<EmptyState title="No playlists yet" subtitle="Create your first playlist to get started." onAction={handleCreatePlaylist} />}
-      renderItem={({ item }) => (
-        <CollectionCard onLongPress={() => setConfirm({ visible: true, title: 'Offline', message: 'Make playlist available offline?', onConfirm: () => toggleOffline('playlists', item.id) })}>
-          <McText semi size={14} color={Colors.grey5} numberOfLines={1}>{item.name}</McText>
-          <McText size={11} color={Colors.grey3} style={{ marginTop: 4 }}>{item.trackIds.length} tracks</McText>
-          <Row style={{ marginTop: 12, justifyContent: 'space-between' }}>
-            <Row>
-              <McVectorIcon type="Feather" name="music" color={Colors.grey4} size={14} />
-              <McText size={11} color={Colors.grey4} style={{ marginLeft: 6 }}>Open</McText>
-            </Row>
-            <TouchableOpacity onPress={() => toggleOffline('playlists', item.id)}>
-              <McVectorIcon type="Feather" name={offline.playlists[item.id] ? 'download' : 'download-cloud'} color={Colors.accent} size={16} />
-            </TouchableOpacity>
-          </Row>
-        </CollectionCard>
-      )}
-    />
-  )
-
-  const renderSongs = () => (
-    <FlashList
-      style={{ marginTop: 8 }}
-      contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 120 }}
-      estimatedItemSize={62}
-      data={sortedTracks}
-      keyExtractor={(t) => String(t.id)}
-      ListHeaderComponent={renderMemoryLane()}
-      renderItem={({ item }) => (
-        <SongRow onPress={() => handleSongRowPress(item)} onLongPress={() => setConfirm({ visible: true, title: 'Offline', message: 'Make song available offline?', onConfirm: () => toggleOffline('tracks', String(item.id)) })}>
-          {(item as any).cover ? (
-            <FastImage source={{ uri: (item as any).cover as string }} style={{ width: 48, height: 48, borderRadius: 2 }} resizeMode={FastImage.resizeMode.cover} />
-          ) : (
-            <CoverImage //@ts-ignore
-              src={item.path}
-              placeHolder={ Images.DefaultMusicIcon }
-              width={48}
-              height={48}
-              style={{borderRadius: 2}}
-            />
-          )}
-          <View style={{ marginLeft: 12, flex: 1 }}>
-            <McText bold size={13} color={Colors.grey5} numberOfLines={1}>{item.title || 'Unknown'}</McText>
-            <McText size={11} color={Colors.grey3} numberOfLines={1} style={{ marginTop: 2 }}>{item.artist || 'Unknown'} {' - '} {item.album || 'Unknown'}</McText>
-          </View>
-          <TouchableOpacity onPress={() => toggleOffline('tracks', String(item.id))}>
-            <McVectorIcon type="Feather" name="download" color={Colors.accent} size={18} />
-          </TouchableOpacity>
-        </SongRow>
-      )}
-    />
-  )
-
-  const renderAlbums = () => (
-    <FlashList
-      style={{ marginTop: 8 }}
-      contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 120 }}
-      estimatedItemSize={180}
-      numColumns={2}
-      data={albums}
-      keyExtractor={(a) => a.album}
-      renderItem={({ item }) => (
-        <CollectionCard
-          onPress={() => playMultiple(tracks.filter((t) => (t.album || 'Unknown').trim() === item.album))}
-          onLongPress={() => setConfirm({ visible: true, title: 'Offline', message: 'Make album available offline?', onConfirm: () => toggleOffline('albums', item.album) })}
-        >
-          {(item.sample as any)?.cover ? (
-            <FastImage source={{ uri: (item.sample as any).cover as string }} style={{ width: 84, height: 84, borderRadius: 6 }} resizeMode={FastImage.resizeMode.cover} />
-          ) : (
-            <CoverImage //@ts-ignore
-              src={ item.sample?.path }
-              width={84}
-              height={84}
-            />
-          )}
-          <McText semi size={14} color={Colors.grey5} numberOfLines={1} style={{ marginTop: 8 }}>{item.album}</McText>
-          <McText size={11} color={Colors.grey3} style={{ marginTop: 4 }} numberOfLines={1}>{item.artist || 'Various'} {' - '} {item.count} songs</McText>
-          <Row style={{ marginTop: 8, justifyContent: 'flex-end' }}>
-            <TouchableOpacity onPress={() => toggleOffline('albums', item.album)}>
-              <McVectorIcon type="Feather" name="download" color={Colors.accent} size={16} />
-            </TouchableOpacity>
-          </Row>
-        </CollectionCard>
-      )}
-    />
-  )
-
-  const renderArtists = () => (
-    <FlashList
-      style={{ marginTop: 8 }}
-      contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 120 }}
-      estimatedItemSize={64}
-      data={artists}
-      keyExtractor={(a) => a.artist}
-      renderItem={({ item }) => (
-        <ArtistRow
-          onPress={() => playMultiple(tracks.filter((t) => (t.artist || 'Unknown').trim() === item.artist))}
-          onLongPress={() => setConfirm({ visible: true, title: 'Offline', message: 'Make artist available offline?', onConfirm: () => toggleOffline('artists', item.artist) })}
-        >
-          <AvatarCircle>
-            <McText bold size={14} color={Colors.white}>{(item.artist || 'U').slice(0,1).toUpperCase()}</McText>
-          </AvatarCircle>
-          <View style={{ marginLeft: 12, flex: 1 }}>
-            <McText semi size={14} color={Colors.grey5} numberOfLines={1}>{item.artist}</McText>
-            <McText size={11} color={Colors.grey3} numberOfLines={1} style={{ marginTop: 2 }}>{item.count} songs</McText>
-          </View>
-          <TouchableOpacity onPress={() => toggleOffline('artists', item.artist)}>
-            <McVectorIcon type="Feather" name="download" color={Colors.accent} size={18} />
-          </TouchableOpacity>
-        </ArtistRow>
-      )}
-    />
-  )
-
   const renderHeaderCommon = () => (
     <View>
       {renderToolbar()}
@@ -774,15 +653,16 @@ const emptyStyles = StyleSheet.create({
     padding: 24,
     alignItems: 'center',
     justifyContent: 'center',
+    rowGap: 16
   },
-  subtitle: { marginTop: 8 },
+  subtitle: { marginTop: 8, textAlign: 'center', maxWidth: '80%' },
 })
 
 const EmptyState: React.FC<{ title: string; subtitle?: string; onAction?: () => void }> = ({ title, subtitle, onAction }) => (
   <View style={emptyStyles.container}>
     <McText extra size={20} color={themeColors.neonMagenta}>{title}</McText>
     {!!subtitle && (
-      <McText color={Colors.grey4} style={emptyStyles.subtitle}>{subtitle}</McText>
+      <McText regular color={Colors.grey4} style={emptyStyles.subtitle}>{subtitle}</McText>
     )}
     {!!onAction && (
       <NeonButton style={{ marginTop: 12 }} onPress={onAction} title="Create playlist" />

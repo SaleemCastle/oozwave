@@ -145,7 +145,7 @@ const EmptyState: React.FC<{ title: string; subtitle?: string }> = ({ title, sub
   <View style={{ padding: 24, alignItems: 'center' }}>
     <McText extra size={20} color={Colors.accent}>{title}</McText>
     {!!subtitle && (
-      <McText color={Colors.grey4} style={{ marginTop: 8 }}>{subtitle}</McText>
+      <McText regular color={Colors.grey4} style={{ marginTop: 16, maxWidth: '80%', textAlign: 'center' }}>{subtitle}</McText>
     )}
   </View>
 )

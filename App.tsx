@@ -33,42 +33,48 @@ const App = () => (
 
 export default App
 TrackPlayer.registerPlaybackService(() => require('./services/TrackPlayer.service'))
-TrackPlayer.setupPlayer()
+
+;(async () => {
+  try {
+    await TrackPlayer.setupPlayer()
+  } catch {}
+})()
 
 // Equalizer initialization will be triggered later from UI to avoid
 // interacting with Android permission prompts during cold start.
 
 // Configure notification/lock-screen player UI and actions
-TrackPlayer.updateOptions({
-  android: {
-    appKilledPlaybackBehavior: 'stop-playback-and-remove-notification' as any,
-  },
-  capabilities: [
-    Capability.Play,
-    Capability.Pause,
-    Capability.SkipToNext,
-    Capability.SkipToPrevious,
-    Capability.JumpForward,
-    Capability.JumpBackward,
-    Capability.SeekTo,
-  ],
-  notificationCapabilities: [
-    Capability.Play,
-    Capability.Pause,
-    Capability.SkipToNext,
-    Capability.SkipToPrevious,
-    Capability.JumpForward,
-    Capability.JumpBackward,
-  ],
-  compactCapabilities: [Capability.Pause, Capability.Play, Capability.SkipToNext],
-  forwardJumpInterval: 15,
-  backwardJumpInterval: 15,
-  progressUpdateEventInterval: 1,
-  // For Android, notification icons must reference app drawable resources by name.
-  // The small icon falls back to the app icon if not provided.
-  icon: 'ic_notification_small',
-  color: 0xED1BA3,
-})
+;(async () => {
+  try {
+    await TrackPlayer.updateOptions({
+      android: {
+        appKilledPlaybackBehavior: 'stop-playback-and-remove-notification' as any,
+      },
+      capabilities: [
+        Capability.Play,
+        Capability.Pause,
+        Capability.SkipToNext,
+        Capability.SkipToPrevious,
+        Capability.JumpForward,
+        Capability.JumpBackward,
+        Capability.SeekTo,
+      ],
+      notificationCapabilities: [
+        Capability.Play,
+        Capability.Pause,
+        Capability.SkipToNext,
+        Capability.SkipToPrevious,
+        Capability.JumpForward,
+        Capability.JumpBackward,
+      ],
+      compactCapabilities: [Capability.Pause, Capability.Play, Capability.SkipToNext],
+      forwardJumpInterval: 15,
+      backwardJumpInterval: 15,
+      progressUpdateEventInterval: 1,
+      color: 0xED1BA3,
+    })
+  } catch {}
+})()
 if (typeof __DEV__ !== 'undefined' && __DEV__) {
     setTimeout(() => {
         try {

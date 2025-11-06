@@ -8,6 +8,9 @@ import { addTracks } from '../../Store/Actions/tracks.actions'
 
 const STORAGE_KEY_TRACKS = '@app/tracks:v1'
 
+// Narrow state type for thunks/middleware that only need tracks
+type RootWithTracks = { tracks: ITrack[] }
+
 export const loadTracksFromStorage = createAsyncThunk<void, void, { state: RootState }>(
   'tracks/loadFromStorage',
   async (_, { dispatch }) => {
@@ -45,7 +48,7 @@ export const loadTracksFromStorage = createAsyncThunk<void, void, { state: RootS
   },
 )
 
-export const persistTracksToStorage = createAsyncThunk<void, void, { state: RootState }>(
+export const persistTracksToStorage = createAsyncThunk<void, void, { state: RootWithTracks }>(
   'tracks/persistToStorage',
   async (_, { getState }) => {
     try {
@@ -59,14 +62,23 @@ export const persistTracksToStorage = createAsyncThunk<void, void, { state: Root
           MusicFiles.primeCoverCache(tracks)
         }
       } catch {}
-      await AsyncStorage.setItem(STORAGE_KEY_TRACKS, JSON.stringify(tracks))
+      // Persist a slimmed array to avoid AsyncStorage size limits (omit base64 covers)
+      const slim = tracks.map((t) => ({
+        id: t.id,
+        path: t.path,
+        title: t.title,
+        artist: t.artist,
+        album: t.album,
+        duration: t.duration,
+      }))
+      await AsyncStorage.setItem(STORAGE_KEY_TRACKS, JSON.stringify(slim))
     } catch {
       // ignore
     }
   },
 )
 
-type RootWithTracks = { tracks: ITrack[] }
+// (moved above)
 
 export const tracksListenerMiddleware = createListenerMiddleware<RootWithTracks>()
 

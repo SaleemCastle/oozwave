@@ -2,6 +2,7 @@ import React, { useRef } from 'react'
 import { View, Image, Dimensions, FlatList, StyleSheet, Animated, TouchableWithoutFeedback } from 'react-native'
 import { ITrack } from '../../Store/Actions/currentTrack.actions'
 import { CoverImage } from 'react-native-get-music-files-v3dev-test'
+import { Images } from '../../Constants'
 
 interface TrackCarouselProps {
     tracks: ITrack[],
@@ -44,7 +45,7 @@ const TrackCarousel: React.FC<TrackCarouselProps> = ({ tracks, handleNavigationT
                             <CoverImage
                             //@ts-ignore
                                 source={ item?.path }
-                                placeHolder={ 'https://cdn2.iconfinder.com/data/icons/Qetto___icons_by_ampeross-d4njobq/256/library-music.png' }
+                                placeHolder={ Images.DefaultMusicIcon }
                                 width={ screenWidth * 0.85 }
                                 height={ screenWidth * 0.85 }
                             />

@@ -332,6 +332,13 @@ const Home = ({ navigation }: HomeProps) => {
                     />
                 </View>
 
+                <TitleSection>
+                    <McText medium size={ 20 } color={ Colors.grey4 }>Charts</McText>
+                    <TouchableWithoutFeedback>
+                        <McImage source={ Images.chevronBlue } />
+                    </TouchableWithoutFeedback>
+                </TitleSection>
+
                 <FlatList 
                     keyExtractor={ (item) => 'discover' + item.id }
                     horizontal
@@ -340,20 +347,20 @@ const Home = ({ navigation }: HomeProps) => {
                         // flex: 1,
                         paddingLeft: 24,
                         justifyContent: 'space-between'
-                    }}
+                    }} 
                     data={ cards }
                     renderItem={ _rederDiscoverCards }
                 />
 
-                {/* <TitleSection>
-                    <McText medium size={ 20 } color={ Colors.grey4 }>Favorite</McText>
+                <TitleSection>
+                    <McText medium size={ 20 } color={ Colors.grey4 }>My Tracks</McText>
 
                     <TouchableWithoutFeedback>
                         <McImage source={ Images.chevronBlue } />
                     </TouchableWithoutFeedback>
-                </TitleSection> */}
+                </TitleSection>
 
-                {/* <View>
+                <View>
                     {
                         !tracks.length 
                         ?
@@ -361,7 +368,7 @@ const Home = ({ navigation }: HomeProps) => {
                         :
                         <TrackCarousel tracks={ tracks } handleNavigationToPlayer={ navToPlayer }/>
                     }
-                </View> */}
+                </View>
             </ScrollView> 
 
             { drawerMounted && (
