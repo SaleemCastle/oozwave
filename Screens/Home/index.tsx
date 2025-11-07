@@ -19,13 +19,14 @@ import { CoverImage } from 'react-native-get-music-files-v3dev-test'
 import TrackPlayer, { State, useProgress } from 'react-native-track-player'
 import { Vibration } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { FlingGestureHandler, Directions, State as GHState } from 'react-native-gesture-handler'
 
 import BottomBar from './BottomBar'
 
 
 import { Colors, Images, Metrics } from '../../Constants'
 import { dummyData } from '../../Mock'
-import { ITrack } from '../../Store/Actions/currentTrack.actions'
+import { setCurrentTrack, ITrack } from '../../Store/Actions/currentTrack.actions'
 import { McText, McImage, PlayButton, McVectorIcon } from '../../Components'
 import MarqueeText from '../../Components/shared/MarqueeText'
 import AppDrawer, { DrawerOption } from '../../Components/AppDrawer'
@@ -36,8 +37,8 @@ import { RootState } from '../../Store/store'
 import DiscoverCard from '../../Components/DiscoverCard'
 import { setCurrentPlayerState } from '../../Store/Actions/playerState.actions'
 import TrackCarousel from '../../Components/TrackCarousel'
-import { playTracksNow } from '../../state/playerQueue'
-import { trackToQueueItem } from '../../state/playerQueue/utils'
+import { playTracksNow, skipToNext, skipToPrevious } from '../../state/playerQueue'
+import { trackToQueueItem, queueItemToITrack } from '../../state/playerQueue/utils'
 import { colors } from '../../theme/tokens'
 import MCIcon from 'react-native-vector-icons/MaterialCommunityIcons'
 import { toggleFavorite } from '../../state/favorites'
@@ -117,6 +118,56 @@ const Home = ({ navigation }: HomeProps) => {
     const isMiniFavorite = currentTrack ? favoriteIds.includes(String(currentTrack.id)) : false
     let isPlaying = playerState === State.Playing.toString()
     const progress = useProgress(1)
+    const coverTranslate = useRef(new Animated.Value(0)).current
+    const coverOpacity = useRef(new Animated.Value(1)).current
+    const lastSwipeDir = useRef<'left' | 'right' | null>(null)
+
+    // Queue state for optimistic UI update
+    const queue = useAppSelector((s) => (s as any).playerQueue?.queue as any[] || [])
+    const queueIndex = useAppSelector((s) => (s as any).playerQueue?.currentIndex as number)
+    const repeatMode = useAppSelector((s) => (s as any).playerQueue?.repeatMode as 'off' | 'queue' | 'track')
+
+    const triggerSwipe = useCallback((dir: 'left' | 'right') => {
+        lastSwipeDir.current = dir
+        const outTo = dir === 'left' ? -50 : 50
+        Animated.parallel([
+            Animated.timing(coverTranslate, { toValue: outTo, duration: 110, useNativeDriver: true }),
+            Animated.timing(coverOpacity, { toValue: 0, duration: 110, useNativeDriver: true }),
+        ]).start()
+
+        // Optimistically update cover art for snappier feel
+        try {
+            let nextIdx = queueIndex
+            if (dir === 'right') {
+                nextIdx = queueIndex < queue.length - 1 ? queueIndex + 1 : (repeatMode === 'queue' ? 0 : queueIndex)
+            } else {
+                nextIdx = queueIndex > 0 ? queueIndex - 1 : (repeatMode === 'queue' ? Math.max(0, queue.length - 1) : queueIndex)
+            }
+            const item = queue[nextIdx]
+            if (item) {
+                // @ts-ignore
+                dispatch(setCurrentTrack(queueItemToITrack(item)))
+            }
+        } catch {}
+
+        if (dir === 'left') {
+            // @ts-ignore
+            dispatch(skipToPrevious())
+        } else {
+            // @ts-ignore
+            dispatch(skipToNext())
+        }
+    }, [queue, queueIndex, repeatMode, dispatch, coverTranslate, coverOpacity])
+
+    useEffect(() => {
+        if (!lastSwipeDir.current) return
+        coverTranslate.setValue(lastSwipeDir.current === 'left' ? -50 : 50)
+        coverOpacity.setValue(0)
+        Animated.parallel([
+            Animated.timing(coverTranslate, { toValue: 0, duration: 160, useNativeDriver: true }),
+            Animated.timing(coverOpacity, { toValue: 1, duration: 160, useNativeDriver: true }),
+        ]).start(() => { lastSwipeDir.current = null })
+    }, [currentTrack?.id])
 
     const DiscoverCardMemoized = memo(DiscoverCard)
 
@@ -419,29 +470,55 @@ const Home = ({ navigation }: HomeProps) => {
                 <BottomSection style={{ bottom: placement === 'replaceTabBar' ? insets.bottom + 12 : insets.bottom + Math.max(72, tabBarHeight + 24) }}>
                     <BottomBar>
                         <Animated.View style={{height: '100%', width: animatedWidth, backgroundColor: Colors.background, position: 'absolute', opacity: 0.3}}/>
-                        <Pressable style={ styles.playerContainer } onPress={() => navigation.navigate('Player')} onLongPress={() => { if (currentTrack) dispatch(toggleFavorite(String(currentTrack.id))) }}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', flex: 1 }}>
-                            <CoverImage
-                                //@ts-ignore
-                                    src={ currentTrack?.path }
-                                    placeHolder={ Images.DefaultMusicIcon }
-                                    width={ 38 }
-                                    style={{borderRadius: 19}}
-                                    height={ 38 }
-                                />
-                                <View style={{ marginLeft: 12, maxWidth: '75%', width: '75%' }}>
-                                    <MarqueeText containerStyle={{ width: '100%' }} text={ currentTrack.title } bold size={ 12 } color={ Colors.grey5 } />
-                                    <McText medium size={ 12 } color={ Colors.grey3 } style={{ marginTop: 4 }} numberOfLines={ 1 }>{ currentTrack?.artist }</McText>
+                            <Pressable style={styles.playerContainer} onPress={() => navigation.navigate('Player')}
+                                onLongPress={() => { if (currentTrack) dispatch(toggleFavorite(String(currentTrack.id))) }}>
+                                <View style={{
+                                    flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', flex:
+                                        1
+                                }}>
+                                    <FlingGestureHandler
+                                        direction={Directions.LEFT}
+                                        onHandlerStateChange={({ nativeEvent }) => { if (nativeEvent.state === GHState.ACTIVE) triggerSwipe('left') }}
+                                    >
+                                        <FlingGestureHandler
+                                            direction={Directions.RIGHT}
+                                            onHandlerStateChange={({ nativeEvent }) => { if (nativeEvent.state === GHState.ACTIVE) triggerSwipe('right') }}
+                                        >
+                                            <Animated.View style={{ transform: [{ translateX: coverTranslate }], opacity: coverOpacity }}>
+                                                <CoverImage
+                                                    src={currentTrack?.path}
+                                                    placeHolder={Images.DefaultMusicIcon}
+                                                    width={38}
+                                                    height={38}
+                                                    style={{ borderRadius: 19 }}
+                                                />
+                                            </Animated.View>
+                                        </FlingGestureHandler>
+                                    </FlingGestureHandler>
+                                    <View style={{ marginLeft: 12, maxWidth: '75%', width: '75%' }}>
+                                        <MarqueeText containerStyle={{ width: '100%' }} text={currentTrack.title} bold
+                                            size={12} color={Colors.grey5} />
+                                        <McText medium size={12} color={Colors.grey3} style={{ marginTop: 4 }}
+                                            numberOfLines={1}>{currentTrack?.artist}</McText>
+                                    </View>
                                 </View>
-                            </View>
-                            <Pressable onPress={() => { if (currentTrack) dispatch(toggleFavorite(String(currentTrack.id))) }} hitSlop={12} style={{ marginHorizontal: 8 }} accessibilityRole='button' accessibilityLabel={ isMiniFavorite ? 'Remove from favorites' : 'Add to favorites' }>
-                                <View>
-                                    <MCIcon name='heart' size={20} color={ isMiniFavorite ? colors.neonMagenta : 'rgba(180,180,180,0.8)' } style={{ position: 'absolute' }} />
-                                    <MCIcon name='heart-outline' size={20} color={'#FFFFFF'} />
-                                </View>
+                                <Pressable onPress={() => {
+                                    if (currentTrack)
+                                        dispatch(toggleFavorite(String(currentTrack.id)))
+                                }} hitSlop={12} style={{
+                                    marginHorizontal:
+                                        8
+                                }} accessibilityRole='button' accessibilityLabel={isMiniFavorite ? 'Remove from favorites' :
+                                    'Add to favorites'}>
+                                    <View>
+                                        <MCIcon name='heart' size={20} color={isMiniFavorite ? colors.neonMagenta :
+                                            'rgba(180,180,180,0.8)'} style={{ position: 'absolute' }} />
+                                        <MCIcon name='heart-outline' size={20} color={'#FFFFFF'} />
+                                    </View>
+                                </Pressable>
+                                <PlayButton iconSize={20} size={46} circle={41.28} icon={isPlaying ? 'pause' : 'play'}
+                                    onPress={handleMiniPlayer} />
                             </Pressable>
-                            <PlayButton iconSize={20} size={ 46 } circle={ 41.28 } icon={ isPlaying ? "pause" : "play"} onPress={ handleMiniPlayer }></PlayButton>
-                        </Pressable>
                     </BottomBar>
                 </BottomSection>
             ) : null }

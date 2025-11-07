@@ -7,6 +7,7 @@ import { AppNavigator } from './Navigation/index'
 import { store } from './Store/store'
 // import { initEqualizerThunk } from './src/state/equalizer/eqSlice'
 import { View, useColorScheme } from 'react-native'
+import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { Colors, Images } from './Constants'
 import PlayerStateSync from './state/playerQueue/PlayerStateSync'
 import { useAppSelector } from './hooks/reduxHooks'
@@ -18,10 +19,10 @@ const Root = () => {
     const isDark = theme === 'system' ? scheme === 'dark' : theme === 'dark'
     const bg = isDark ? Colors.background : Colors.white
     return (
-        <View style={{ flex: 1, backgroundColor: bg }}>
+        <GestureHandlerRootView style={{ flex: 1, backgroundColor: bg }}>
             <PlayerStateSync />
             <AppNavigator />
-        </View>
+        </GestureHandlerRootView>
     )
 }
 

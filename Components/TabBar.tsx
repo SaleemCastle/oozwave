@@ -169,7 +169,6 @@ const MiniTabPlayer: React.FC<{ onOpenPlayer?: () => void }> = ({ onOpenPlayer }
     const cy = size / 2
     const circumference = 2 * Math.PI * r
 
-    
     return (
         <Pressable
             accessibilityRole="button"
