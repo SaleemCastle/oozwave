@@ -9,7 +9,7 @@ export type PlaylistsStackParamList = {
 
 export type RootStackParamList = {
     Onboarding: undefined
-    Library: undefined
+    Library: { initialSection?: 'Playlists' | 'Songs' | 'Albums' | 'Artists' } | undefined
     Player: undefined
     Billboards: { info: IBillboardProps }
     Discover: undefined,

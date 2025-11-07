@@ -62,7 +62,7 @@ export const persistTracksToStorage = createAsyncThunk<void, void, { state: Root
           MusicFiles.primeCoverCache(tracks)
         }
       } catch {}
-      // Persist a slimmed array to avoid AsyncStorage size limits (omit base64 covers)
+      // Persist a slimmed array; include cover so we can prime artwork cache on cold start
       const slim = tracks.map((t) => ({
         id: t.id,
         path: t.path,
@@ -70,6 +70,7 @@ export const persistTracksToStorage = createAsyncThunk<void, void, { state: Root
         artist: t.artist,
         album: t.album,
         duration: t.duration,
+        cover: typeof (t as any).cover === 'string' ? (t as any).cover : undefined,
       }))
       await AsyncStorage.setItem(STORAGE_KEY_TRACKS, JSON.stringify(slim))
     } catch {

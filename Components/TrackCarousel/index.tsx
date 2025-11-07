@@ -1,5 +1,5 @@
 import React, { useRef } from 'react'
-import { View, Image, Dimensions, FlatList, StyleSheet, Animated, TouchableWithoutFeedback } from 'react-native'
+import { View, Image, Dimensions, StyleSheet, Animated, TouchableWithoutFeedback } from 'react-native'
 import { ITrack } from '../../Store/Actions/currentTrack.actions'
 import { CoverImage } from 'react-native-get-music-files-v3dev-test'
 import { Images } from '../../Constants'
@@ -18,47 +18,41 @@ const TrackCarousel: React.FC<TrackCarouselProps> = ({ tracks, handleNavigationT
 
         const translateX = scrollX.interpolate({
             inputRange,
-            outputRange: [-screenWidth * 0.15, 0, screenWidth * 0.15],
+            outputRange: [-screenWidth * 0.08, 0, screenWidth * 0.08],
         })
 
         const scale = scrollX.interpolate({
             inputRange,
-            outputRange: [0.9, 1, 0.9],
+            outputRange: [0.96, 1, 0.96],
         })
 
         const opacity = scrollX.interpolate({
             inputRange,
-            outputRange: [0.3, 1, 0.3],
+            outputRange: [0.0, 1, 0.0],
         })
 
         return (
-            <Animated.View style={{ 
-                ...styles.trackContainer, 
-                transform: [{ translateX }, { scale }], 
-                opacity, 
-                marginLeft: index === 0 ? 0 : screenWidth * 0.15, 
-                marginRight: index === tracks.length - 1 ? 24 : 0 
-            }}>
-                <View>
+            <View style={ styles.page }>
+                <Animated.View style={{ ...styles.artworkWrap, transform: [{ translateX }, { scale }], opacity }}>
                     <TouchableWithoutFeedback onPress={() => handleNavigationToPlayer(item)}>
-                        <View style={{ marginVertical: 24, borderRadius: 4, overflow: 'hidden' }}>
+                        <View style={{ borderRadius: 4, overflow: 'hidden' }}>
                             <CoverImage
-                            //@ts-ignore
-                                source={ item?.path }
+                                //@ts-ignore
+                                src={ item?.path }
                                 placeHolder={ Images.DefaultMusicIcon }
                                 width={ screenWidth * 0.85 }
                                 height={ screenWidth * 0.85 }
                             />
                         </View>
                     </TouchableWithoutFeedback>
-                </View>
-            </Animated.View>
+                </Animated.View>
+            </View>
         )
     }
 
     return (
         <View style={ styles.container }>
-            <FlatList
+            <Animated.FlatList
                 data={ tracks }
                 horizontal
                 showsHorizontalScrollIndicator={ false }
@@ -66,8 +60,14 @@ const TrackCarousel: React.FC<TrackCarouselProps> = ({ tracks, handleNavigationT
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={ renderItem }
                 onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], {
-                    useNativeDriver: false,
+                    useNativeDriver: true,
                 })}
+                removeClippedSubviews={ false }
+                initialNumToRender={ 3 }
+                windowSize={ 5 }
+                scrollEventThrottle={ 16 }
+                decelerationRate='fast'
+                snapToAlignment='center'
                 contentContainerStyle={ styles.flatListContent }
             />
         </View>
@@ -83,13 +83,16 @@ const styles = StyleSheet.create({
     },
     flatListContent: {
         alignItems: 'center',
-        paddingHorizontal: 24,
     },
-    trackContainer: {
+    page: {
+        width: screenWidth,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    artworkWrap: {
         width: screenWidth * 0.85,
         justifyContent: 'center',
         alignItems: 'center',
-        // backgroundColor: 'red'
     },
     trackImage: {
         width: '100%',

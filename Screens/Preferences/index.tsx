@@ -18,6 +18,7 @@ import {
   setExplicitContentFilter,
   setTheme,
   setNormalizeVolume,
+  setHomeTracksSort,
   persistSettingsToStorage,
 } from '../../state/settings'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
@@ -175,11 +176,25 @@ const Preferences: React.FC<Props> = () => {
         <Switch value={ settings.explicitContentFilter } onValueChange={ toggle('explicitContentFilter') } />
       </Row>
 
-      <SectionHeader medium size={16} color={ Colors.grey3 }>Advanced Audio</SectionHeader>
-      <Row>
-        <McText medium size={14} color={ Colors.grey4 }>Normalize volume</McText>
-        <Switch value={ settings.normalizeVolume } onValueChange={ (v) => { dispatch(setNormalizeVolume(v)); dispatch(persistSettingsToStorage()) } } />
-      </Row>
+  <SectionHeader medium size={16} color={ Colors.grey3 }>Advanced Audio</SectionHeader>
+  <Row>
+    <McText medium size={14} color={ Colors.grey4 }>Normalize volume</McText>
+    <Switch value={ settings.normalizeVolume } onValueChange={ (v) => { dispatch(setNormalizeVolume(v)); dispatch(persistSettingsToStorage()) } } />
+  </Row>
+
+  <SectionHeader medium size={16} color={ Colors.grey3 }>Home Tracks Order</SectionHeader>
+  <Row>
+    <RadioOption label="Most played" selected={ settings.homeTracksSort === 'mostPlayed' } onPress={ () => { dispatch(setHomeTracksSort('mostPlayed')); dispatch(persistSettingsToStorage()) } } />
+  </Row>
+  <Row>
+    <RadioOption label="Recently added" selected={ settings.homeTracksSort === 'recentlyAdded' } onPress={ () => { dispatch(setHomeTracksSort('recentlyAdded')); dispatch(persistSettingsToStorage()) } } />
+  </Row>
+  <Row>
+    <RadioOption label="Favorites" selected={ settings.homeTracksSort === 'favorites' } onPress={ () => { dispatch(setHomeTracksSort('favorites')); dispatch(persistSettingsToStorage()) } } />
+  </Row>
+  <Row>
+    <RadioOption label="Duration" selected={ settings.homeTracksSort === 'duration' } onPress={ () => { dispatch(setHomeTracksSort('duration')); dispatch(persistSettingsToStorage()) } } />
+  </Row>
     </Container>
   )
 }

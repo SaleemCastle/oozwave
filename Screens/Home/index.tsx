@@ -49,6 +49,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import type { AppTabParamList } from '../../Navigation/AppTabs'
 import type { RootStackParamList } from '../../types'
 import { selectMiniPlayerPlacement, selectSettings } from '../../state/settings'
+import { selectPlayCounts } from '../../state/plays'
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 
 export type HomeProps = CompositeScreenProps<BottomTabScreenProps<AppTabParamList, 'Home'>, NativeStackScreenProps<RootStackParamList>> 
@@ -103,6 +104,7 @@ const Home = ({ navigation }: HomeProps) => {
     const dispatch = useAppDispatch()
     const placement = useAppSelector(selectMiniPlayerPlacement)
     const { theme } = useAppSelector(selectSettings)
+    const settingsAll = useAppSelector(selectSettings)
     const insets = useSafeAreaInsets()
     const tabBarHeight = useBottomTabBarHeight()
     const hapticsEnabled = useAppSelector((s) => (s as any).settings?.haptics as boolean)
@@ -111,6 +113,7 @@ const Home = ({ navigation }: HomeProps) => {
     const isDark = theme === 'system' ? scheme === 'dark' : theme === 'dark'
     const containerBg = isDark ? Colors.background : Colors.white
     const favoriteIds = useAppSelector((s) => (s as any).favorites?.ids as string[] || [])
+    const playCounts = useAppSelector(selectPlayCounts)
     const isMiniFavorite = currentTrack ? favoriteIds.includes(String(currentTrack.id)) : false
     let isPlaying = playerState === State.Playing.toString()
     const progress = useProgress(1)
@@ -216,6 +219,26 @@ const Home = ({ navigation }: HomeProps) => {
         navigation.navigate('Player')
     }, [dispatch, navigation])
 
+    const curatedTracks = useMemo(() => {
+        const list = [...tracks]
+        const sort = (settingsAll as any)?.homeTracksSort ?? 'mostPlayed'
+        switch (sort) {
+            case 'favorites': {
+                const favSet = new Set(favoriteIds.map(String))
+                return list.filter((t) => favSet.has(String(t.id))).slice(0, 7)
+            }
+            case 'duration':
+                return list.sort((a, b) => (b.duration || 0) - (a.duration || 0)).slice(0, 7)
+            case 'recentlyAdded':
+                return list.sort((a, b) => Number(b.id) - Number(a.id)).slice(0, 7)
+            case 'mostPlayed':
+            default:
+                return list
+                    .sort((a, b) => ((playCounts[String(b.id)] || 0) - (playCounts[String(a.id)] || 0)))
+                    .slice(0, 7)
+        }
+    }, [tracks, favoriteIds, playCounts, settingsAll])
+
 
 
     const _renderItem = useCallback(({item, index}: { item: IDummyPlaylist , index: number }) => {
@@ -294,11 +317,16 @@ const Home = ({ navigation }: HomeProps) => {
                     <McText extra size={ 24 } color={ Colors.primary }>
                         Good evening
                     </McText>
-                    <DrawerToggleButton
-                        progress={ drawerProgress }
-                        isOpen={ drawerOpen }
-                        onPress={ toggleDrawer }
-                    />
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Pressable accessibilityRole='button' accessibilityLabel='Open favorites' onPress={() => navigation.navigate('Library', { screen: 'Favorites' } as any)} style={{ marginRight: 8 }} hitSlop={12}>
+                            <MCIcon name='heart' size={22} color={ colors.neonMagenta } />
+                        </Pressable>
+                        <DrawerToggleButton
+                            progress={ drawerProgress }
+                            isOpen={ drawerOpen }
+                            onPress={ toggleDrawer }
+                        />
+                    </View>
                 </HeaderRow>
                 <SearchSection>
                     <McImage 
@@ -355,18 +383,18 @@ const Home = ({ navigation }: HomeProps) => {
                 <TitleSection>
                     <McText medium size={ 20 } color={ Colors.grey4 }>My Tracks</McText>
 
-                    <TouchableWithoutFeedback>
+                    <TouchableWithoutFeedback onPress={() => navigation.navigate('Library', { screen: 'LibraryTab', params: { initialSection: 'Songs' } } as any)}>
                         <McImage source={ Images.chevronBlue } />
                     </TouchableWithoutFeedback>
                 </TitleSection>
 
-                <View>
+                <View style={{marginTop: 16 }}>
                     {
                         !tracks.length 
                         ?
                         <McText>Error Loading Tracks</McText>
                         :
-                        <TrackCarousel tracks={ tracks } handleNavigationToPlayer={ navToPlayer }/>
+                        <TrackCarousel tracks={ curatedTracks } handleNavigationToPlayer={ navToPlayer }/>
                     }
                 </View>
             </ScrollView> 

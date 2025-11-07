@@ -445,16 +445,46 @@ const sorters: Record<SortBy, (a: Playlist, b: Playlist) => number> = {
     size: (a, b) => b.trackIds.length - a.trackIds.length,
 }
 
+// Smart playlist: Most Played (derived from state.plays.counts)
+const selectPlayCounts = (state: any) => {
+    try { return (state?.plays?.counts) || {} } catch { return {} }
+}
+
 export const selectSortedAndFilteredPlaylists = createSelector(
     selectAllPlaylists,
     selectSearchQuery,
     selectSortMode,
-    (playlists, query, sortBy) => {
+    selectPlayCounts,
+    (playlists, query, sortBy, counts) => {
         const filtered = query.length
             ? playlists.filter((playlist) => playlist.name.toLowerCase().includes(query))
             : playlists
         const sorter = sorters[sortBy]
-        return [...filtered].sort(sorter)
+        const base = [...filtered].sort(sorter)
+
+        // Build synthetic "Most Played" only when not searching and there are counts
+        if (!query.length && counts && typeof counts === 'object') {
+            const topIds = Object.keys(counts)
+                .filter((k) => Number.isFinite(Number(counts[k])))
+                .sort((a, b) => (counts[b] - counts[a]))
+                .slice(0, 200)
+            if (topIds.length > 0) {
+                const now = Date.now()
+                const smart: Playlist = {
+                    id: '__smart_most_played__',
+                    name: 'Most Played',
+                    description: 'Your top tracks by play count',
+                    color: undefined,
+                    emoji: '🔥',
+                    isPublic: false,
+                    trackIds: topIds,
+                    createdAt: now,
+                    updatedAt: now,
+                }
+                return [smart, ...base]
+            }
+        }
+        return base
     },
 )
 

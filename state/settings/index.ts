@@ -5,6 +5,8 @@ import type { RootState } from '../../Store/store'
 export type MiniPlayerPlacement = 'aboveTabBar' | 'mergeWithTabBar' | 'replaceTabBar'
 export type MiniPlayerTabSlot = 'currentTab' | 'homeTab'
 
+export type HomeTracksSort = 'mostPlayed' | 'recentlyAdded' | 'favorites' | 'duration'
+
 type SettingsState = {
   isInitialized: boolean
   miniPlayerPlacement: MiniPlayerPlacement
@@ -19,6 +21,7 @@ type SettingsState = {
   explicitContentFilter: boolean
   theme: 'system' | 'light' | 'dark'
   normalizeVolume: boolean
+  homeTracksSort: HomeTracksSort
 }
 
 const STORAGE_KEY = '@app/settings:v1'
@@ -37,6 +40,7 @@ const initialState: SettingsState = {
   explicitContentFilter: false,
   theme: 'system',
   normalizeVolume: true,
+  homeTracksSort: 'mostPlayed',
 }
 
 export const loadSettingsFromStorage = createAsyncThunk<void, void, { state: RootState }>(
@@ -116,6 +120,9 @@ const settingsSlice = createSlice({
     setNormalizeVolume(state, action: PayloadAction<boolean>) {
       state.normalizeVolume = action.payload
     },
+    setHomeTracksSort(state, action: PayloadAction<HomeTracksSort>) {
+      state.homeTracksSort = action.payload
+    },
   },
 })
 
@@ -134,6 +141,7 @@ export const {
   setExplicitContentFilter,
   setTheme,
   setNormalizeVolume,
+  setHomeTracksSort,
 } = settingsSlice.actions
 
 export const settingsReducer = settingsSlice.reducer

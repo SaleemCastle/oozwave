@@ -95,12 +95,12 @@ const soundMatchScore = (aRaw: string, bRaw: string) => {
   return score
 }
 
-const Library: React.FC<LibraryProps> = ({ navigation }) => {
+const Library: React.FC<LibraryProps> = ({ navigation, route }) => {
   const dispatch = useAppDispatch()
   const tracks = useAppSelector((s) => s.tracks as ITrack[])
   const playlists = useAppSelector(selectSortedAndFilteredPlaylists)
 
-  const [section, setSection] = useState<SectionKey>('Playlists')
+  const [section, setSection] = useState<SectionKey>(route?.params?.initialSection ?? 'Playlists')
   const [isPendingSection, startSectionTransition] = useTransition()
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
@@ -671,7 +671,6 @@ const EmptyState: React.FC<{ title: string; subtitle?: string; onAction?: () => 
 )
 
 export default Library
-
 
 
 

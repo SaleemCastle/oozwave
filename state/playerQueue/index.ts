@@ -32,6 +32,7 @@ import {
     trackToQueueItem,
 } from './utils'
 import { selectPlaylistById } from '../playlists'
+import { increment as incrementPlayCount, persistPlayCountsToStorage } from '../plays'
 
 export { default as playerQueueReducer } from './playerQueueSlice'
 export {
@@ -252,6 +253,15 @@ export const startPlaylistPlayback = createAsyncThunk<void, StartPlaylistPayload
         await TrackPlayer.play()
 
         dispatch(persistQueueToStorage())
+        try {
+            const targetId = effectiveQueue[effectiveIndex]?.id
+            if (targetId != null) {
+                // @ts-ignore
+                dispatch(incrementPlayCount(String(targetId)))
+                // @ts-ignore
+                dispatch(persistPlayCountsToStorage())
+            }
+        } catch {}
 
         for (let i = firstChunkSize; i < effectiveQueue.length; i += CHUNK_SIZE) {
             const batch = effectiveQueue.slice(i, i + CHUNK_SIZE)
@@ -288,6 +298,15 @@ export const playTracksNow = createAsyncThunk<void, QueueItem[], { state: RootSt
         await applyRepeatMode(repeatMode)
         await TrackPlayer.play()
         dispatch(persistQueueToStorage())
+        try {
+            const firstId = firstChunk[0]?.id ?? queueItems[0]?.id
+            if (firstId != null) {
+                // @ts-ignore
+                dispatch(incrementPlayCount(String(firstId)))
+                // @ts-ignore
+                dispatch(persistPlayCountsToStorage())
+            }
+        } catch {}
 
         // Add remaining items in background-friendly chunks to avoid large bridge payloads
         for (let i = firstChunkSize; i < queueItems.length; i += CHUNK_SIZE) {
@@ -399,6 +418,17 @@ export const skipToNext = createAsyncThunk<void, void, { state: RootState }>(
         }
 
         dispatch(persistQueueToStorage())
+        try {
+            const s = getState()
+            const idx = s.playerQueue.currentIndex
+            const id = s.playerQueue.queue[idx]?.id
+            if (id != null) {
+                // @ts-ignore
+                dispatch(incrementPlayCount(String(id)))
+                // @ts-ignore
+                dispatch(persistPlayCountsToStorage())
+            }
+        } catch {}
     },
 )
 
