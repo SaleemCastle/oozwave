@@ -229,7 +229,7 @@ const PlaylistsScreen: React.FC = () => {
                                 { item.name }
                             </McText>
                             <McText medium style={ styles.cardMeta } numberOfLines={ 1 }>
-                                { `${metaLabel} - ${updatedLabel}` }
+                                { `${metaLabel}` }
                             </McText>
                         </View>
                     </View>

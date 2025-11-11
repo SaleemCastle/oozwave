@@ -126,8 +126,10 @@ const Home = ({ navigation }: HomeProps) => {
     const queue = useAppSelector((s) => (s as any).playerQueue?.queue as any[] || [])
     const queueIndex = useAppSelector((s) => (s as any).playerQueue?.currentIndex as number)
     const repeatMode = useAppSelector((s) => (s as any).playerQueue?.repeatMode as 'off' | 'queue' | 'track')
+    const canSwipe = queue.length > 1
 
     const triggerSwipe = useCallback((dir: 'left' | 'right') => {
+        if (!canSwipe) return
         lastSwipeDir.current = dir
         const outTo = dir === 'left' ? -50 : 50
         Animated.parallel([
@@ -157,7 +159,7 @@ const Home = ({ navigation }: HomeProps) => {
             // @ts-ignore
             dispatch(skipToNext())
         }
-    }, [queue, queueIndex, repeatMode, dispatch, coverTranslate, coverOpacity])
+    }, [queue, queueIndex, repeatMode, dispatch, coverTranslate, coverOpacity, canSwipe])
 
     useEffect(() => {
         if (!lastSwipeDir.current) return
@@ -168,6 +170,15 @@ const Home = ({ navigation }: HomeProps) => {
             Animated.timing(coverOpacity, { toValue: 1, duration: 160, useNativeDriver: true }),
         ]).start(() => { lastSwipeDir.current = null })
     }, [currentTrack?.id])
+
+    // If only one track, ensure cover is fully visible and no stale animation state
+    useEffect(() => {
+        if (!canSwipe) {
+            coverTranslate.setValue(0)
+            coverOpacity.setValue(1)
+            lastSwipeDir.current = null
+        }
+    }, [canSwipe, coverTranslate, coverOpacity])
 
     const DiscoverCardMemoized = memo(DiscoverCard)
 
@@ -470,31 +481,31 @@ const Home = ({ navigation }: HomeProps) => {
                 <BottomSection style={{ bottom: placement === 'replaceTabBar' ? insets.bottom + 12 : insets.bottom + Math.max(72, tabBarHeight + 24) }}>
                     <BottomBar>
                         <Animated.View style={{height: '100%', width: animatedWidth, backgroundColor: Colors.background, position: 'absolute', opacity: 0.3}}/>
-                            <Pressable style={styles.playerContainer} onPress={() => navigation.navigate('Player')}
-                                onLongPress={() => { if (currentTrack) dispatch(toggleFavorite(String(currentTrack.id))) }}>
+                            <FlingGestureHandler
+                                enabled={canSwipe}
+                                direction={Directions.LEFT}
+                                onHandlerStateChange={({ nativeEvent }) => { if (nativeEvent.state === GHState.END) triggerSwipe('left') }}
+                            >
+                                <FlingGestureHandler
+                                    enabled={canSwipe}
+                                    direction={Directions.RIGHT}
+                                    onHandlerStateChange={({ nativeEvent }) => { if (nativeEvent.state === GHState.END) triggerSwipe('right') }}
+                                >
+                                    <Pressable style={styles.playerContainer} onPress={() => navigation.navigate('Player')}
+                                        onLongPress={() => { if (currentTrack) dispatch(toggleFavorite(String(currentTrack.id))) }}>
                                 <View style={{
                                     flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', flex:
                                         1
                                 }}>
-                                    <FlingGestureHandler
-                                        direction={Directions.LEFT}
-                                        onHandlerStateChange={({ nativeEvent }) => { if (nativeEvent.state === GHState.ACTIVE) triggerSwipe('left') }}
-                                    >
-                                        <FlingGestureHandler
-                                            direction={Directions.RIGHT}
-                                            onHandlerStateChange={({ nativeEvent }) => { if (nativeEvent.state === GHState.ACTIVE) triggerSwipe('right') }}
-                                        >
-                                            <Animated.View style={{ transform: [{ translateX: coverTranslate }], opacity: coverOpacity }}>
-                                                <CoverImage
-                                                    src={currentTrack?.path}
-                                                    placeHolder={Images.DefaultMusicIcon}
-                                                    width={38}
-                                                    height={38}
-                                                    style={{ borderRadius: 19 }}
-                                                />
-                                            </Animated.View>
-                                        </FlingGestureHandler>
-                                    </FlingGestureHandler>
+                                    <Animated.View style={{ transform: [{ translateX: coverTranslate }], opacity: coverOpacity }}>
+                                        <CoverImage
+                                            src={currentTrack?.path}
+                                            placeHolder={Images.DefaultMusicIcon}
+                                            width={38}
+                                            height={38}
+                                            style={{ borderRadius: 19 }}
+                                        />
+                                    </Animated.View>
                                     <View style={{ marginLeft: 12, maxWidth: '75%', width: '75%' }}>
                                         <MarqueeText containerStyle={{ width: '100%' }} text={currentTrack.title} bold
                                             size={12} color={Colors.grey5} />
@@ -519,6 +530,8 @@ const Home = ({ navigation }: HomeProps) => {
                                 <PlayButton iconSize={20} size={46} circle={41.28} icon={isPlaying ? 'pause' : 'play'}
                                     onPress={handleMiniPlayer} />
                             </Pressable>
+                                </FlingGestureHandler>
+                            </FlingGestureHandler>
                     </BottomBar>
                 </BottomSection>
             ) : null }
