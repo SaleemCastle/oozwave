@@ -13,6 +13,8 @@ export interface Playlist {
     color?: string
     emoji?: string
     isPublic: boolean
+    // Optional cover image resource id (require number). When absent, derive from first track.
+    coverRes?: number
     trackIds: string[]
     createdAt: number
     updatedAt: number

@@ -94,6 +94,7 @@ const normalizePlaylist = (raw: Partial<Playlist> | undefined | null): Playlist 
         color: typeof raw.color === 'string' ? raw.color : undefined,
         emoji: typeof raw.emoji === 'string' ? raw.emoji : undefined,
         isPublic: typeof raw.isPublic === 'boolean' ? raw.isPublic : false,
+        coverRes: typeof (raw as any).coverRes === 'number' ? (raw as any).coverRes : undefined,
         trackIds: normalizeTrackIds(raw.trackIds),
         createdAt,
         updatedAt,
@@ -241,7 +242,7 @@ const slice = createSlice({
     name: 'playlists',
     initialState,
     reducers: {
-        createPlaylist: (state, action: PayloadAction<{ id?: string; name: string; description?: string; color?: string; emoji?: string; isPublic?: boolean }>) => {
+        createPlaylist: (state, action: PayloadAction<{ id?: string; name: string; description?: string; color?: string; emoji?: string; isPublic?: boolean; coverRes?: number }>) => {
             const now = Date.now()
             const id = action.payload.id ?? generateId()
             const name = makeUniqueName(state, action.payload.name, {})
@@ -252,6 +253,7 @@ const slice = createSlice({
                 color: action.payload.color,
                 emoji: action.payload.emoji,
                 isPublic: action.payload.isPublic ?? false,
+                coverRes: action.payload.coverRes,
                 trackIds: [],
                 createdAt: now,
                 updatedAt: now,
@@ -293,7 +295,7 @@ const slice = createSlice({
         },
         updatePlaylistMeta: (
             state,
-            action: PayloadAction<{ id: string; description?: string; color?: string; emoji?: string; isPublic?: boolean }>,
+            action: PayloadAction<{ id: string; description?: string; color?: string; emoji?: string; isPublic?: boolean; coverRes?: number }>,
         ) => {
             const playlist = state.byId[action.payload.id]
             if (!playlist) {
@@ -313,6 +315,9 @@ const slice = createSlice({
             }
             if (typeof action.payload.isPublic !== 'undefined') {
                 playlist.isPublic = action.payload.isPublic
+            }
+            if (typeof action.payload.coverRes !== 'undefined') {
+                playlist.coverRes = action.payload.coverRes
             }
             playlist.updatedAt = Date.now()
         },
@@ -487,6 +492,8 @@ export const selectSortedAndFilteredPlaylists = createSelector(
         return base
     },
 )
+
+export const selectPublicPlaylists = createSelector(selectAllPlaylists, (all) => all.filter((p) => p.isPublic))
 
 export const selectSelectedPlaylist = createSelector(selectFeature, (playlists) => {
     const id = playlists.selectedId

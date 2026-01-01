@@ -1,18 +1,22 @@
 ﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
     Alert,
+    BackHandler,
     Modal,
     Pressable,
     ScrollView,
     StyleSheet,
     Text,
     View,
+    FlatList,
+    InteractionManager,
+    ActivityIndicator,
 } from 'react-native'
 import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist'
 import { RectButton, Swipeable } from 'react-native-gesture-handler'
 import Icon from 'react-native-vector-icons/Feather'
 import MCIcon from 'react-native-vector-icons/MaterialCommunityIcons'
-import { RouteProp, useNavigation, useRoute } from '@react-navigation/native'
+import { RouteProp, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native'
 import LinearGradient from 'react-native-linear-gradient'
 import styled from 'styled-components/native'
 
@@ -62,7 +66,33 @@ const PlaylistDetailScreen: React.FC = () => {
     const [moveTrackTarget, setMoveTrackTarget] = useState<TrackRef | null>(null)
     const [moveModalVisible, setMoveModalVisible] = useState(false)
     const [addTracksVisible, setAddTracksVisible] = useState(false)
+    const addOpenLockRef = useRef(false)
+    const openAddTracks = useCallback(() => {
+        if (addOpenLockRef.current || addTracksVisible) return
+        addOpenLockRef.current = true
+        setAddTracksVisible(true)
+        setTimeout(() => { addOpenLockRef.current = false }, 600)
+    }, [addTracksVisible])
     const [selectedAddIds, setSelectedAddIds] = useState<Set<string>>(new Set())
+
+    // Robust hardware back handling: if there is no back stack, go to the tab root
+    useFocusEffect(
+        React.useCallback(() => {
+            const onBack = () => {
+                // @ts-ignore
+                if ((navigation as any)?.canGoBack?.()) {
+                    navigation.goBack()
+                } else {
+                    // Go to the tabs root (Library -> Home)
+                    // @ts-ignore
+                    navigation.navigate('Library' as never)
+                }
+                return true
+            }
+            const sub = BackHandler.addEventListener('hardwareBackPress', onBack)
+            return () => sub.remove()
+        }, [navigation])
+    )
 
     const swipeRefs = useRef<Record<string, Swipeable | null>>({})
 
@@ -327,7 +357,7 @@ const PlaylistDetailScreen: React.FC = () => {
                                 <Icon name='edit' size={16} color={ colors.pureWhite } />
                                 <McText medium size={12} color={ colors.pureWhite } style={{ marginLeft: 6 }}>Edit</McText>
                             </ActionPill>
-                            <ActionPill onPress={ () => setAddTracksVisible(true) }>
+                            <ActionPill onPress={ openAddTracks }>
                                 <Icon name='plus' size={16} color={ colors.pureWhite } />
                                 <McText medium size={12} color={ colors.pureWhite } style={{ marginLeft: 6 }}>Add</McText>
                             </ActionPill>
@@ -446,55 +476,95 @@ interface AddTracksModalProps {
 }
 
 const AddTracksModal: React.FC<AddTracksModalProps> = ({ visible, tracks, selectedIds, onToggle, onConfirm, onClose }) => {
+    const [listReady, setListReady] = useState(false)
+    const hydratedRef = useRef(false)
+
+    useEffect(() => {
+        if (!visible) return
+        if (hydratedRef.current) {
+            setListReady(true)
+            return
+        }
+        setListReady(false)
+        const task = InteractionManager.runAfterInteractions(() => {
+            hydratedRef.current = true
+            setListReady(true)
+        })
+        return () => {
+            // @ts-ignore cancel exists on native InteractionManager
+            task?.cancel?.()
+        }
+    }, [visible])
+
+    const ITEM_HEIGHT = 56
+
+    const renderItem = useCallback(({ item }: { item: ITrack }) => {
+        const id = String(item.id)
+        const selected = selectedIds.has(id)
+        return (
+            <Pressable
+                style={[styles.addTrackRow, selected ? styles.addTrackRowSelected : null]}
+                onPress={() => onToggle(id)}
+            >
+                <View style={{ flexDirection: 'row', columnGap: 12 }}>
+                    <CoverImage
+                        // @ts-ignore - library expects file path string
+                        source={ item.path }
+                        placeHolder={ Images.DefaultMusicIcon }
+                        width={40}
+                        height={40}
+                        style={styles.coverImage}
+                    />
+                    <View>
+                        <McText medium style={styles.addTrackTitle} numberOfLines={1}>
+                            {item.title}
+                        </McText>
+                        <McText style={styles.addTrackMeta} numberOfLines={1}>
+                            {item.artist ?? 'Unknown artist'}
+                        </McText>
+                    </View>
+                </View>
+                {selected ? <Icon name='check' size={18} color={colors.neonMagenta} /> : null}
+            </Pressable>
+        )
+    }, [onToggle, selectedIds])
+
+    const keyExtractor = useCallback((t: ITrack) => String(t.id), [])
+    const getItemLayout = useCallback((_: any, index: number) => ({ length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index }), [])
+
     if (!visible) {
         return null
     }
+
     return (
-        <Modal transparent visible animationType='slide' onRequestClose={ onClose }>
-            <View style={ styles.modalOverlay }>
-                <View style={ styles.addModalCard }>
-                    <McText semi style={ styles.modalTitle }>Select tracks</McText>
-                    <ScrollView style={ styles.modalList }>
-                        { tracks.map((track) => {
-                            const id = String(track.id)
-                            const selected = selectedIds.has(id)
-                            return (
-                                <Pressable
-                                    key={ id }
-                                    style={[styles.addTrackRow, selected ? styles.addTrackRowSelected : null]}
-                                    onPress={ () => onToggle(id) }
-                                >
-                                    <View style={{flexDirection: 'row', columnGap: 12}}>
-                                        <CoverImage
-                                            // @ts-ignore - library expects file path string
-                                            source={ track.path }
-                                            placeHolder={ Images.DefaultMusicIcon }
-                                            width={ 40 }
-                                            height={ 40 }
-                                            style={styles.coverImage}
-                                        />
-                                        <View>
-                                            <McText medium  style={ styles.addTrackTitle } numberOfLines={ 1 }>
-                                                { track.title }
-                                            </McText>
-                                            <McText style={ styles.addTrackMeta } numberOfLines={ 1 }>
-                                                { track.artist ?? 'Unknown artist' }
-                                            </McText>
-                                        </View>
-                                    </View>
-                                    { selected ? (
-                                        <Icon name='check' size={ 18 } color={ colors.neonMagenta } />
-                                    ) : null }
-                                </Pressable>
-                            )
-                        }) }
-                    </ScrollView>
-                    <View style={ styles.modalActions }>
-                        <NeonButton title='Cancel' variant='ghost' onPress={ onClose } style={ styles.modalActionButton } fullWidth />
+        <Modal transparent visible animationType='slide' onRequestClose={onClose}>
+            <View style={styles.modalOverlay}>
+                <View style={styles.addModalCard}>
+                    <McText semi style={styles.modalTitle}>Select tracks</McText>
+                    {listReady ? (
+                        <FlatList
+                            style={styles.modalList}
+                            data={tracks}
+                            renderItem={renderItem}
+                            keyExtractor={keyExtractor}
+                            initialNumToRender={12}
+                            windowSize={7}
+                            maxToRenderPerBatch={12}
+                            updateCellsBatchingPeriod={16}
+                            removeClippedSubviews
+                            getItemLayout={getItemLayout}
+                        />
+                    ) : (
+                        <View style={[styles.modalList, { alignItems: 'center', justifyContent: 'center' }]}>
+                            <ActivityIndicator size='small' color={colors.neonMagenta} />
+                        </View>
+                    )}
+                    <View style={styles.modalActions}>
+                        <NeonButton title='Cancel' variant='ghost' onPress={onClose} style={styles.modalActionButton} fullWidth />
                         <NeonButton
                             title='Add to playlist'
-                            onPress={ onConfirm }
-                            disabled={ !selectedIds.size }
+                            onPress={onConfirm}
+                            disabled={!selectedIds.size}
                             fullWidth
                         />
                     </View>

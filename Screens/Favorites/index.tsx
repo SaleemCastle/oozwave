@@ -32,9 +32,9 @@ const Favorites: React.FC = () => {
       : base
     switch (sort) {
       case 'alpha':
-        return filtered.slice().sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }))
+        return filtered.slice().sort((a, b) => a.title.trim().localeCompare(b.title.trim(), undefined, { sensitivity: 'base' }))
       case 'artist':
-        return filtered.slice().sort((a, b) => (a.artist || '').localeCompare(b.artist || '', undefined, { sensitivity: 'base' }))
+        return filtered.slice().sort((a, b) => (a.artist || '').trim().localeCompare((b.artist || '').trim(), undefined, { sensitivity: 'base' }))
       case 'recent':
       default:
         return filtered

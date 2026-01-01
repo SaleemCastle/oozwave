@@ -6,12 +6,13 @@ import { Provider } from 'react-redux'
 import { AppNavigator } from './Navigation/index'
 import { store } from './Store/store'
 // import { initEqualizerThunk } from './src/state/equalizer/eqSlice'
-import { View, useColorScheme } from 'react-native'
+import { View, useColorScheme, DeviceEventEmitter } from 'react-native'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { Colors, Images } from './Constants'
 import PlayerStateSync from './state/playerQueue/PlayerStateSync'
 import { useAppSelector } from './hooks/reduxHooks'
 import { selectSettings } from './state/settings'
+import AppToast from './Components/shared/AppToast'
 
 const Root = () => {
     const scheme = useColorScheme()
@@ -22,6 +23,7 @@ const Root = () => {
         <GestureHandlerRootView style={{ flex: 1, backgroundColor: bg }}>
             <PlayerStateSync />
             <AppNavigator />
+            <AppToast />
         </GestureHandlerRootView>
     )
 }

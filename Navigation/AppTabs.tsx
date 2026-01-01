@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef } from 'react'
 import { Alert, BackHandler, DeviceEventEmitter, StyleSheet, Text, View } from 'react-native'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
-import { useFocusEffect, useNavigation } from '@react-navigation/native'
+import { useFocusEffect, useNavigation, useNavigationState } from '@react-navigation/native'
 
 import TabBar from '../Components/TabBar'
 import { Colors } from '../Constants'
@@ -20,9 +20,9 @@ const Tab = createBottomTabNavigator<AppTabParamList>()
 
 const PlaceholderScreen = (title: string) => {
     const Component = React.memo(() => (
-        <View style={ styles.placeholderContainer }>
-            <Text style={ styles.placeholderTitle }>{ title }</Text>
-            <Text style={ styles.placeholderSubtitle }>Coming soon</Text>
+        <View style={styles.placeholderContainer}>
+            <Text style={styles.placeholderTitle}>{title}</Text>
+            <Text style={styles.placeholderSubtitle}>Coming soon</Text>
         </View>
     ))
     Component.displayName = `${title}PlaceholderScreen`
@@ -39,6 +39,15 @@ const AppTabs: React.FC = () => {
         navigation.navigate('Player')
     }, [navigation])
 
+    // Track current active tab name from tab navigator state
+    const activeTabName = useNavigationState((state: any) => {
+        try {
+            const idx = state?.index ?? 0
+            return state?.routes?.[idx]?.name
+        } catch { return undefined }
+    })
+    const lastBackPressRef = useRef(0)
+
     // Track Home drawer state via a simple event channel
     const isHomeDrawerOpenRef = useRef(false)
     useEffect(() => {
@@ -48,7 +57,7 @@ const AppTabs: React.FC = () => {
         return () => sub.remove()
     }, [])
 
-    // Intercept Android back on the Library (tabs) root to confirm exit or close drawer first
+    // Intercept Android back; only prompt to exit when the Home tab is active
     useFocusEffect(
         React.useCallback(() => {
             const onBackPress = () => {
@@ -57,20 +66,24 @@ const AppTabs: React.FC = () => {
                     DeviceEventEmitter.emit('homeDrawerRequestClose')
                     return true
                 }
-                // Otherwise, ask to exit instead of closing immediately
-                Alert.alert(
-                    'Exit app',
-                    'Do you want to exit?',
-                    [
-                        { text: 'Cancel', style: 'cancel' },
-                        { text: 'Exit', style: 'destructive', onPress: () => BackHandler.exitApp() },
-                    ]
-                )
+                // Only prompt to exit on Home tab; otherwise navigate to Home
+                if (activeTabName !== 'Home') {
+                    navigation.navigate('Home' as never)
+                    return true
+                }
+                // We are on Home: require double-back to exit (within 2s)
+                const now = Date.now()
+                if (now - lastBackPressRef.current < 2000) {
+                    BackHandler.exitApp()
+                    return true
+                }
+                lastBackPressRef.current = now
+                DeviceEventEmitter.emit('appToast', { message: 'Press back again to exit', durationMs: 1600 })
                 return true
             }
             const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress)
             return () => sub.remove()
-        }, [])
+        }, [navigation, activeTabName])
     )
 
     return (
@@ -80,42 +93,42 @@ const AppTabs: React.FC = () => {
                 tabBarShowLabel: false,
                 tabBarHideOnKeyboard: true,
             }}
-            tabBar={ (props) => (
+            tabBar={(props) => (
                 placement === 'replaceTabBar'
                     ? null as unknown as React.ReactNode
                     : (
                         <TabBar
-                            { ...props }
-                            showNowPlaying={ placement === 'mergeWithTabBar' && hasTrack }
-                            onNowPlayingPress={ handleNowPlayingPress }
+                            {...props}
+                            showNowPlaying={placement === 'mergeWithTabBar' && hasTrack}
+                            onNowPlayingPress={handleNowPlayingPress}
                         />
                     )
-            ) }
+            )}
         >
             <Tab.Screen
                 name="Home"
-                component={ Home }
+                component={Home}
                 options={{
                     tabBarLabel: 'Home',
                 }}
             />
             <Tab.Screen
                 name="LibraryTab"
-                component={ Library }
+                component={Library}
                 options={{
                     tabBarLabel: 'Library',
                 }}
             />
             <Tab.Screen
                 name="Favorites"
-                component={ FavoritesScreen }
+                component={FavoritesScreen}
                 options={{
                     tabBarLabel: 'Favorites',
                 }}
             />
             <Tab.Screen
                 name="Profile"
-                component={ ProfileScreen }
+                component={ProfileScreen}
                 options={{
                     tabBarLabel: 'Profile',
                 }}

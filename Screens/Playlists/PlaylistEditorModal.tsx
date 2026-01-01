@@ -12,7 +12,7 @@ import {
 } from 'react-native'
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native'
 
-import { ConfirmDialog, McText, NeonButton } from '../../Components'
+import { ConfirmDialog, McText, NeonButton, McImage } from '../../Components'
 import tokens from '../../theme/tokens'
 import { playlistActions, selectAllPlaylists, selectPlaylistById } from '../../state/playlists'
 
@@ -20,7 +20,7 @@ import { useAppDispatch, useAppSelector } from '../../hooks/reduxHooks'
 import useId from '../../hooks/useId'
 import { PlaylistsStackParamList } from '../../types'
 import { generateId } from '../../state/playlists/utils'
-import { Colors } from '../../Constants'
+import { Colors, Images } from '../../Constants'
 
 const { colors } = tokens
 
@@ -51,6 +51,7 @@ const PlaylistEditorModal: React.FC = () => {
     const [color, setColor] = useState<string | undefined>(editingPlaylist?.color ?? COLOR_OPTIONS[0])
     const [emoji, setEmoji] = useState<string | undefined>(editingPlaylist?.emoji ?? EMOJI_OPTIONS[0])
     const [isPublic, setIsPublic] = useState(editingPlaylist?.isPublic ?? false)
+    const [coverRes, setCoverRes] = useState<number | undefined>((editingPlaylist as any)?.coverRes)
     const [showCancelConfirm, setShowCancelConfirm] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
@@ -61,6 +62,8 @@ const PlaylistEditorModal: React.FC = () => {
             setColor(editingPlaylist.color ?? COLOR_OPTIONS[0])
             setEmoji(editingPlaylist.emoji ?? EMOJI_OPTIONS[0])
             setIsPublic(editingPlaylist.isPublic)
+            // @ts-ignore
+            setCoverRes((editingPlaylist as any)?.coverRes)
         }
     }, [editingPlaylist, params.mode])
 
@@ -141,6 +144,7 @@ const PlaylistEditorModal: React.FC = () => {
                     color,
                     emoji,
                     isPublic,
+                    coverRes,
                 }),
             )
             navigation.replace('PlaylistDetail', { playlistId: newId })
@@ -162,6 +166,7 @@ const PlaylistEditorModal: React.FC = () => {
                 color,
                 emoji,
                 isPublic,
+                coverRes,
             }),
         )
         navigation.goBack()
@@ -249,6 +254,37 @@ const PlaylistEditorModal: React.FC = () => {
                     )) }
                 </ScrollView>
 
+                <McText semi color={colors.pureWhite} style={ styles.label }>Cover art</McText>
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={ false }
+                    contentContainerStyle={ styles.optionsRow }
+                    style={ styles.optionsCarousel }
+                >
+                    { [
+                        Images.SampleCoverA,
+                        Images.SampleCoverB,
+                        Images.SampleCoverC,
+                        Images.SampleCoverD,
+                        Images.SampleCoverE,
+                        Images.SampleCoverF,
+                        Images.SampleCoverG,
+                        Images.SampleCoverH,
+                        Images.SampleCoverI,
+                        Images.SampleCoverJ,
+                        Images.SampleCoverK,
+                    ].map((img, idx) => (
+                        <Pressable key={ idx } onPress={ () => setCoverRes(img as unknown as number) }>
+                            <McImage source={ img as unknown as number } style={[styles.coverOption, coverRes === (img as unknown as number) ? styles.coverOptionSelected : null]} />
+                        </Pressable>
+                    )) }
+                    <Pressable onPress={ () => setCoverRes(undefined) }>
+                        <View style={[styles.coverOption, styles.coverNone]}>
+                            <Text style={{ color: colors.pureWhite, fontSize: 12 }}>Use first track</Text>
+                        </View>
+                    </Pressable>
+                </ScrollView>
+
                 <View style={ styles.toggleRow }>
                     <McText semi color={colors.pureWhite}>Public playlist</McText>
                     <Switch
@@ -330,6 +366,22 @@ const styles = StyleSheet.create({
         paddingVertical:2,
         paddingLeft:2
     },
+    coverOption: {
+        width: 153,
+        height: 186,
+        borderRadius: 20,
+        marginRight: 12,
+        borderWidth: 2,
+        borderColor: 'rgba(255,255,255,0.12)'
+    },
+    coverOptionSelected: {
+        borderColor: colors.neonMagenta,
+    },
+    coverNone: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(255,255,255,0.08)'
+    },
     colorSwatch: {
         width: 44,
         height: 44,
@@ -384,4 +436,4 @@ const styles = StyleSheet.create({
         marginTop: 6,
     },
 })
-
+                

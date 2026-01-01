@@ -166,14 +166,14 @@ const Library: React.FC<LibraryProps> = ({ navigation, route }) => {
     const arr = [...filteredTracks]
     switch (songSort) {
       case 'artist':
-        return arr.sort((a, b) => (a.artist || '').localeCompare(b.artist || '', undefined, { sensitivity: 'base' }))
+        return arr.sort((a, b) => (a.artist || '').trim().localeCompare((b.artist || '').trim(), undefined, { sensitivity: 'base' }))
       case 'duration':
         return arr.sort((a, b) => (a.duration || 0) - (b.duration || 0))
       case 'recent':
         return arr.sort((a, b) => Number(b.id) - Number(a.id))
       case 'alpha':
       default:
-        return arr.sort((a, b) => (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' }))
+        return arr.sort((a, b) => (a.title || '').trim().localeCompare((b.title || '').trim(), undefined, { sensitivity: 'base' }))
     }
   }, [filteredTracks, songSort])
 
@@ -671,7 +671,6 @@ const EmptyState: React.FC<{ title: string; subtitle?: string; onAction?: () => 
 )
 
 export default Library
-
 
 
 

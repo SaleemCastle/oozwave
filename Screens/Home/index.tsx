@@ -27,12 +27,13 @@ import BottomBar from './BottomBar'
 import { Colors, Images, Metrics } from '../../Constants'
 import { dummyData } from '../../Mock'
 import { setCurrentTrack, ITrack } from '../../Store/Actions/currentTrack.actions'
-import { McText, McImage, PlayButton, McVectorIcon } from '../../Components'
+import { McText, McImage, PlayButton, McVectorIcon, NeonButton } from '../../Components'
 import MarqueeText from '../../Components/shared/MarqueeText'
 import AppDrawer, { DrawerOption } from '../../Components/AppDrawer'
 import { styles } from './styles';
 import { useAppDispatch, useAppSelector } from '../../hooks/reduxHooks'
 import { IDummyPlaylist } from '../../Mock/Dummy'
+import { selectPublicPlaylists } from '../../state/playlists'
 import { RootState } from '../../Store/store'
 import DiscoverCard from '../../Components/DiscoverCard'
 import { setCurrentPlayerState } from '../../Store/Actions/playerState.actions'
@@ -303,18 +304,45 @@ const Home = ({ navigation }: HomeProps) => {
 
 
 
-    const _renderItem = useCallback(({item, index}: { item: IDummyPlaylist , index: number }) => {
+    const publicPlaylists = useAppSelector(selectPublicPlaylists)
+    const libraryTracksAll = useAppSelector((s) => s.tracks as ITrack[])
+    const trackPathById = useMemo(() => {
+        const m = new Map<string, string>()
+        try { (libraryTracksAll || []).forEach((t) => m.set(String(t.id), t.path)) } catch {}
+        return m
+    }, [libraryTracksAll])
+
+    type PlaylistCard = { id: string; name: string; songs: number; coverRes?: number; coverPath?: string }
+    const publicCards: PlaylistCard[] = useMemo(() => {
+        return publicPlaylists.map((p) => {
+            const firstId = p.trackIds[0]
+            const coverPath = firstId ? trackPathById.get(String(firstId)) : undefined
+            return { id: p.id, name: p.name, songs: p.trackIds.length, coverRes: (p as any).coverRes, coverPath }
+        })
+    }, [publicPlaylists, trackPathById])
+
+    const _renderItem = useCallback(({item, index}: { item: PlaylistCard , index: number }) => {
         return (
             <Pressable 
                 style={{
                     marginTop: 16,
                     marginLeft: index === 0 ? 24 : 0,
-                    marginRight: index === dummyData.Playlists.length - 1 ? 0 : 24
+                    marginRight: 24
                 }}
-                onPress={() => Alert.alert('This is ' + item.name)}
+                onPress={() => navigation.navigate('PlaylistDetail', { playlistId: item.id } as any)}
             >
-
-                <McImage source={ item.thumbnail } key={ index } style={{ marginBottom: 12 }}/>
+                { item.coverRes ? (
+                    <McImage source={ item.coverRes as unknown as number } style={{ width: 153, height: 186, borderRadius: 20, marginBottom: 12 }} />
+                ) : (
+                    <CoverImage
+                        //@ts-ignore
+                        src={ item.coverPath }
+                        placeHolder={ Images.DefaultMusicIcon }
+                        width={ 153 }
+                        height={ 186 }
+                        style={{ borderRadius: 20, marginBottom: 12 }}
+                    />
+                ) }
 
                 <McText semi size={ 16 } color={ Colors.grey5 }>{ item.name }</McText>
 
@@ -328,7 +356,7 @@ const Home = ({ navigation }: HomeProps) => {
                 </McText>
             </Pressable>
         )
-    }, [])
+    }, [navigation])
     const _rederDiscoverCards = useCallback(({item, index}: { item: any , index: number }) => {
         return (
             <DiscoverCardMemoized 
@@ -412,14 +440,30 @@ const Home = ({ navigation }: HomeProps) => {
                 </TitleSection>
 
                 <View>
-                    <FlatList 
-                        keyExtractor={ (item) => 'playlist_' + item.id }
-                        horizontal
-                        showsHorizontalScrollIndicator={ false }
-                        contentContainerStyle={{}}
-                        data={ dummyData.Playlists }
-                        renderItem={ _renderItem }
-                    />
+                    { publicCards.length > 0 ? (
+                        <FlatList 
+                            keyExtractor={ (item) => 'playlist_' + item.id }
+                            horizontal
+                            showsHorizontalScrollIndicator={ false }
+                            contentContainerStyle={{}}
+                            data={ publicCards }
+                            renderItem={ _renderItem }
+                        />
+                    ) : (
+                        <View style={{ paddingHorizontal: 24, paddingVertical: 24, alignItems: 'center' }}>
+                            <View style={{ width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.06)' }}>
+                                <McVectorIcon type='MaterialCommunityIcons' name='playlist-music-outline' color={ Colors.grey3 } size={ 28 } />
+                            </View>
+                            <McText extra size={18} color={ Colors.grey5 } style={{ marginTop: 12 }}>No public playlists</McText>
+                            <McText regular color={ Colors.grey4 } style={{ marginTop: 6, textAlign: 'center' }}>
+                                Make a playlist public in the editor to show it here.
+                            </McText>
+                            <Pressable onPress={ () => navigation.navigate('PlaylistEditor', { mode: 'create' } as any) } style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center' }}>
+                                <McVectorIcon type='Feather' name='plus-circle' color={ Colors.grey4 } size={ 16 } />
+                                <McText medium color={ Colors.grey4 } style={{ marginLeft: 6, textDecorationLine: 'underline' }}>Create playlist</McText>
+                            </Pressable>
+                        </View>
+                    ) }
                 </View>
 
                 <TitleSection>
@@ -451,13 +495,23 @@ const Home = ({ navigation }: HomeProps) => {
                 </TitleSection>
 
                 <View style={{marginTop: 16 }}>
-                    {
-                        !tracks.length 
-                        ?
-                        <McText>Error Loading Tracks</McText>
-                        :
+                    { !tracks.length ? (
+                        <View style={{ paddingHorizontal: 24, paddingVertical: 24, alignItems: 'center' }}>
+                            <View style={{ width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.06)' }}>
+                                <McVectorIcon type='MaterialCommunityIcons' name='music-note-outline' color={ Colors.grey3 } size={ 28 } />
+                            </View>
+                            <McText extra size={18} color={ Colors.grey5 } style={{ marginTop: 12 }}>No tracks found</McText>
+                            <McText regular color={ Colors.grey4 } style={{ marginTop: 6, textAlign: 'center' }}>
+                                Add music to your library to see tracks here.
+                            </McText>
+                            <Pressable onPress={() => navigation.navigate('Library', { screen: 'LibraryTab', params: { initialSection: 'Songs' } } as any)} style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center' }}>
+                                <McVectorIcon type='Feather' name='navigation' color={ Colors.grey4 } size={ 16 } />
+                                <McText medium color={ Colors.grey4 } style={{ marginLeft: 6, textDecorationLine: 'underline' }}>Browse library</McText>
+                            </Pressable>
+                        </View>
+                    ) : (
                         <TrackCarousel tracks={ curatedTracks } handleNavigationToPlayer={ navToPlayer }/>
-                    }
+                    ) }
                 </View>
             </ScrollView> 
 
