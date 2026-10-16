@@ -1,72 +1,47 @@
-﻿import { check, PERMISSIONS, RESULTS, request } from 'react-native-permissions'
+import { check, PERMISSIONS, RESULTS, request, type PermissionStatus } from 'react-native-permissions'
 import { setPermission, setPermissionError } from '../Store/Actions/setPermissions.actions'
 
 import { Platform } from 'react-native'
 import { store } from '../Store/store'
 
 const resolveAudioPermission = () => {
-    if (Platform.OS === 'android') {
-        if ((Platform.Version as number) >= 33) {
-            return PERMISSIONS.ANDROID.READ_MEDIA_AUDIO
-        }
-        return PERMISSIONS.ANDROID.READ_EXTERNAL_STORAGE
-    }
-    // iOS: request Media Library (requires NSAppleMusicUsageDescription in Info.plist)
-    return PERMISSIONS.IOS.MEDIA_LIBRARY
+    if (Platform.OS === 'ios') return PERMISSIONS.IOS.MEDIA_LIBRARY
+    return Number(Platform.Version) >= 33
+        ? PERMISSIONS.ANDROID.READ_MEDIA_AUDIO
+        : PERMISSIONS.ANDROID.READ_EXTERNAL_STORAGE
 }
 
-export function checkPermissions () {
-    const permissionId = resolveAudioPermission()
-
-    check(permissionId)
-        .then((result) => {
-            switch (result) {
-            case RESULTS.UNAVAILABLE:
-                store.dispatch(setPermission(RESULTS.UNAVAILABLE))
-                break
-            case RESULTS.DENIED:
-                requestAudioPermission()
-                break
-            case RESULTS.LIMITED:
-                store.dispatch(setPermission(RESULTS.LIMITED))
-                break
-            case RESULTS.GRANTED:
-                store.dispatch(setPermission(RESULTS.GRANTED))
-                break
-            case RESULTS.BLOCKED:
-                store.dispatch(setPermission(RESULTS.BLOCKED))
-                break
-            default:
-                store.dispatch(setPermission(result))
-                break
-            }
-        })
-        .catch((error) => {
-            store.dispatch(setPermissionError(error))
-        })
+// Checking never prompts. Ask for access only after the user taps Scan.
+export async function checkPermissions(): Promise<PermissionStatus> {
+    try {
+        const result = await check(resolveAudioPermission())
+        store.dispatch(setPermission(result))
+        return result
+    } catch (error) {
+        store.dispatch(setPermissionError(error))
+        throw error
+    }
 }
 
-export function requestAudioPermission () {
-    const permissionId = resolveAudioPermission()
+export async function requestAudioPermission(): Promise<PermissionStatus> {
+    const current = await checkPermissions()
+    if (current !== RESULTS.DENIED) return current
 
-    const rationale = {
-        title: 'Oozwave Storage Permission',
-        message: 'Oozwave needs your permission to read music files',
-        buttonNeutral: 'Ask Me Later',
-        buttonNegative: 'Cancel',
-        buttonPositive: 'OK',
+    try {
+        const permissionId = resolveAudioPermission()
+        const result = Platform.OS === 'ios'
+            ? await request(permissionId)
+            : await request(permissionId, {
+                title: 'Oozwave Music Permission',
+                message: 'Oozwave needs access to read your music files',
+                buttonNeutral: 'Ask Me Later',
+                buttonNegative: 'Cancel',
+                buttonPositive: 'OK',
+            })
+        store.dispatch(setPermission(result))
+        return result
+    } catch (error) {
+        store.dispatch(setPermissionError(error))
+        throw error
     }
-
-    request(permissionId, rationale)
-        .then((result) => {
-            console.log('Permission result from request ', result)
-            if (result === RESULTS.GRANTED || result === 'granted') {
-                store.dispatch(setPermission(RESULTS.GRANTED))
-            } else {
-                store.dispatch(setPermission(result))
-            }
-        })
-        .catch((error) => {
-            store.dispatch(setPermissionError(error))
-        })
 }

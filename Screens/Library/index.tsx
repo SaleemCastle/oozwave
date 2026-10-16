@@ -15,7 +15,7 @@ import {
 import styled from 'styled-components/native'
 import { useColorScheme } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { CoverImage } from 'react-native-get-music-files-v3dev-test'
+import { CoverImage } from '../../src/native/musicFiles'
 import FastImage from 'react-native-fast-image'
 import { FlashList } from '@shopify/flash-list'
 

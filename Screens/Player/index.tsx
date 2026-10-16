@@ -11,7 +11,7 @@ import { setCurrentTrack, ITrack } from '../../Store/Actions/currentTrack.action
 import { McText, McImage, PlayButton } from '../../Components'
 import { PlayerProps } from '../../types'
 import { useAppDispatch, useAppSelector } from '../../hooks/reduxHooks'
-import { CoverImage } from 'react-native-get-music-files-v3dev-test'
+import { CoverImage } from '../../src/native/musicFiles'
 import {
     selectCurrentQueueItem,
     selectPlaybackMeta,

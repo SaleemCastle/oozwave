@@ -43,7 +43,7 @@ import { useAppDispatch, useAppSelector } from '../../hooks/reduxHooks'
 import { PlaylistsStackParamList } from '../../types'
 import { ITrack } from '../../Store/Actions/currentTrack.actions'
 import { Colors, Images } from '../../Constants'
-import { CoverImage } from 'react-native-get-music-files-v3dev-test'
+import { CoverImage } from '../../src/native/musicFiles'
 import { toggleFavorite } from '../../state/favorites'
 
 const { colors, shadows } = tokens

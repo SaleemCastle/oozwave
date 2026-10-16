@@ -1,14 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { StatusBar, View, InteractionManager } from 'react-native'
-import MusicFiles, { Constants, ResponseShape, ITrack as DeviceTrack } from 'react-native-get-music-files-v3dev-test'
+import { Alert, AppState, StatusBar, View, InteractionManager, Platform } from 'react-native'
+import { openSettings, RESULTS } from 'react-native-permissions'
+import MusicFiles, { Constants, ResponseShape, ITrack as DeviceTrack } from '../../src/native/musicFiles'
 import styled from 'styled-components/native'
 
 import { Colors, Images } from '../../Constants'
 import { McText, McImage, PlayButton } from '../../Components'
 import WaveformLoader from '../../Components/shared/WaveformLoader'
 // TrackPlayer options are configured globally; no direct import needed here
-import { checkPermissions } from '../../services/requestPermissions'
-import { OnboardingProps, PermissionStatus } from '../../types'
+import { checkPermissions, requestAudioPermission } from '../../services/requestPermissions'
+import { OnboardingProps } from '../../types'
 import { useAppDispatch, useAppSelector } from '../../hooks/reduxHooks'
 import { addTracks, addTracksError } from '../../Store/Actions/tracks.actions'
 import { ADD_TRACKS_ERROR } from '../../Store/ReduxConstants'
@@ -21,7 +22,6 @@ const SLEEP = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
  
 const Onboarding = ({ navigation }: OnboardingProps) => {
     const dispatch = useAppDispatch()
-    const permission = useAppSelector((state: RootState) => state.permission)
     const storedTracks = useAppSelector((state: RootState) => state.tracks)
     const hasStoredTracks = useMemo(() => {
         if (!Array.isArray(storedTracks)) return false
@@ -35,11 +35,21 @@ const Onboarding = ({ navigation }: OnboardingProps) => {
     const navigateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const scanRequestTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const didAutoRedirectRef = useRef(false)
+    const scanInProgressRef = useRef(false)
 
     // Player options configured globally in App.tsx
     
     useEffect(() => {
-        checkPermissions()
+        const refreshPermission = () => {
+            checkPermissions().catch(() => {
+                setStatusMessage('Unable to check music access. Please try again.')
+            })
+        }
+        refreshPermission()
+        const subscription = AppState.addEventListener('change', (state) => {
+            if (state === 'active') refreshPermission()
+        })
+        return () => subscription.remove()
     }, [])
 
     const clearNavigateTimer = useCallback(() => {
@@ -125,6 +135,9 @@ const Onboarding = ({ navigation }: OnboardingProps) => {
 
     const handleScanSuccess = useCallback((tracks: ResponseShape<DeviceTrack>) => {
         const filteredTracks = tracks.results.filter((track) => {
+            if (Platform.OS === 'ios') {
+                return true
+            }
             const title = (track.title ?? '').trim().toUpperCase()
             const album = (track.album ?? '').trim().toLowerCase()
             const rawPath = track.path ?? ''
@@ -173,6 +186,9 @@ const Onboarding = ({ navigation }: OnboardingProps) => {
     }), [])
 
     const safeTrackFilter = useCallback((track: DeviceTrack) => {
+        if (Platform.OS === 'ios') {
+            return true
+        }
         const title = (track.title ?? '').trim().toUpperCase()
         const album = (track.album ?? '').trim().toLowerCase()
         const rawPath = track.path ?? ''
@@ -247,7 +263,7 @@ const Onboarding = ({ navigation }: OnboardingProps) => {
     }, [safeTrackFilter])
 
     const handleScanPress = useCallback(async () => {
-        if (isLoading) {
+        if (scanInProgressRef.current) {
             return
         }
 
@@ -266,23 +282,41 @@ const Onboarding = ({ navigation }: OnboardingProps) => {
             return
         }
 
-        if (permission.permission !== PermissionStatus.GRANTED) {
-            setStatusMessage('We need storage access to scan for music. Please grant permission when prompted.')
-            checkPermissions()
-            return
-        }
-
+        scanInProgressRef.current = true
         setScanResult(null)
         setStatusMessage('Preparing scan...')
         setIsLoading(true)
         clearScanRequestTimer()
 
         try {
+            const permission = await requestAudioPermission()
+            if (permission !== RESULTS.GRANTED) {
+                if (permission === RESULTS.BLOCKED) {
+                    setStatusMessage('Music access is disabled. Enable it in Settings, then tap the button to scan again.')
+                    Alert.alert('Allow music access', 'Enable music library access for Oozwave in Settings.', [
+                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'Open Settings', onPress: () => {
+                            openSettings().catch(() => setStatusMessage('Unable to open Settings. Open the Settings app and enable music access for Oozwave.'))
+                        } },
+                    ])
+                } else if (permission === RESULTS.UNAVAILABLE) {
+                    setStatusMessage(Platform.OS === 'ios'
+                        ? 'Music library access is unavailable on this device. The iOS simulator does not support it; use an iPhone with songs downloaded in the Music app.'
+                        : 'Music access is unavailable on this device.')
+                } else {
+                    setStatusMessage('Music access was not granted. Tap the button to try again.')
+                }
+                return
+            }
+
+            setStatusMessage('Preparing scan...')
             await startScanAfterPaint()
             const tracks = await scanInBatches()
 
             if (tracks.length === 0) {
-                finishScan(false, 'No matching tracks found. Make sure your music is at least 60 seconds long and stored in the Music folder.')
+                finishScan(false, Platform.OS === 'ios'
+                    ? 'No playable songs found. Download songs in the Music app that are at least 60 seconds long. Protected streaming tracks cannot be imported.'
+                    : 'No matching tracks found. Make sure your music is at least 60 seconds long and stored in the Music folder.')
                 return
             }
 
@@ -290,8 +324,11 @@ const Onboarding = ({ navigation }: OnboardingProps) => {
             finishScan(true, `${tracks.length} tracks ready. Launching your library...`)
         } catch (err) {
             handleScanError(err)
+        } finally {
+            scanInProgressRef.current = false
+            setIsLoading(false)
         }
-    }, [clearScanRequestTimer, dispatch, finishScan, handleScanError, hasStoredTracks, isLoading, navigation, permission.permission, scanInBatches, startScanAfterPaint])
+    }, [clearScanRequestTimer, dispatch, finishScan, handleScanError, hasStoredTracks, navigation, scanInBatches, startScanAfterPaint])
 
     return (
         <Container>
@@ -305,7 +342,9 @@ const Onboarding = ({ navigation }: OnboardingProps) => {
             </McText>
 
             <McText regular color={ Colors.grey4 } size={ 14 } align='center' style={{ marginHorizontal: 40, marginTop: 32 }}>
-                Tap the button below to grant access and let Oozwave scan your device for music files.
+                {Platform.OS === 'ios'
+                    ? 'Tap the button below to allow access to your music library and scan songs downloaded in the Music app.'
+                    : 'Tap the button below to grant access and let Oozwave scan your device for music files.'}
             </McText>
 
             <View style={{ marginTop: 48, alignItems: 'center' }}>

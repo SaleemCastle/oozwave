@@ -1,13 +1,27 @@
-require File.join(File.dirname(`node --print "require.resolve('expo/package.json')"`), "scripts/autolinking")
-# Resolve react_native_pods.rb with node to allow for hoisting
-require Pod::Executable.execute_command('node', ['-p',
-  'require.resolve(
-    "react-native/scripts/react_native_pods.rb",
-    {paths: [process.argv[1]]},
-  )', __dir__]).strip
+require_relative '../node_modules/react-native/scripts/react_native_pods'
+require_relative '../node_modules/@react-native-community/cli-platform-ios/native_modules'
 
 platform :ios, '13.0'
 prepare_react_native_project!
+
+# Shim for CocoaPods/RN arity mismatches.
+if defined?(Pod::Spec::DSL)
+  Pod::Spec::DSL.define_method(:use_react_native_codegen!) do |*args|
+    ::Object.send(:use_react_native_codegen!, *args)
+  end
+end
+
+if defined?(Pod::Specification::DSL)
+  Pod::Specification::DSL.define_method(:use_react_native_codegen!) do |*args|
+    ::Object.send(:use_react_native_codegen!, *args)
+  end
+end
+
+if defined?(Pod::Specification)
+  Pod::Specification.define_method(:use_react_native_codegen!) do |*args|
+    ::Object.send(:use_react_native_codegen!, *args)
+  end
+end
 
 # If you are using a `react-native-flipper` your iOS build will fail when `NO_FLIPPER=1` is set.
 # because `react-native-flipper` depends on (FlipperKit,...) that will be excluded
@@ -27,15 +41,10 @@ if linkage != nil
 end
 
 target 'oozwaveMobile' do
-  use_expo_modules!
-  post_integrate do |installer|
-    begin
-      expo_patch_react_imports!(installer)
-    rescue => e
-      Pod::UI.warn e
-    end
-  end
   config = use_native_modules!
+
+  permissions_path = '../node_modules/react-native-permissions/ios'
+  pod 'Permission-MediaLibrary', :path => "#{permissions_path}/MediaLibrary"
 
   # Flags change depending on the env values.
   flags = get_default_flags()
@@ -51,7 +60,7 @@ target 'oozwaveMobile' do
     # you should disable the next line.
     :flipper_configuration => flipper_config,
     # An absolute path to your application root.
-    :app_path => "#{Pod::Config.instance.installation_root}/.."
+    :app_path => "#{::Pod::Config.instance.installation_root}/.."
   )
 
   target 'oozwaveMobileTests' do
@@ -67,5 +76,19 @@ target 'oozwaveMobile' do
       :mac_catalyst_enabled => false
     )
     __apply_Xcode_12_5_M1_post_install_workaround(installer)
+    # Boost 1.76 still uses std::unary_function, removed by current libc++.
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        definitions = config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] || ['$(inherited)']
+        definitions = [definitions] unless definitions.is_a?(Array)
+        config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] = definitions | ['_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION']
+        if target.name.start_with?('Flipper')
+          # Older Flipper headers rely on transitive inclusion of <functional>.
+          flags = config.build_settings['OTHER_CPLUSPLUSFLAGS'] || ['$(inherited)']
+          flags = [flags] unless flags.is_a?(Array)
+          config.build_settings['OTHER_CPLUSPLUSFLAGS'] = flags | ['-include', 'functional']
+        end
+      end
+    end
   end
 end

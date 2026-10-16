@@ -29,7 +29,7 @@ import { useAppDispatch, useAppSelector } from '../../hooks/reduxHooks'
 import { PlaylistsStackParamList } from '../../types'
 import { Colors, Images } from '../../Constants'
 import { ITrack } from '../../Store/Actions/currentTrack.actions'
-import { CoverImage } from 'react-native-get-music-files-v3dev-test'
+import { CoverImage } from '../../src/native/musicFiles'
 
 const { colors, shadows } = tokens
 

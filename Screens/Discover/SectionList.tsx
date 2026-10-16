@@ -9,7 +9,7 @@ import { fetchDiscoverSection, PlaylistBrief, ArtistBrief, AlbumBrief, CreatorBr
 import { McImage } from '../../Components'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import type { RootStackParamList } from '../../types'
-import { CoverImage } from 'react-native-get-music-files-v3dev-test'
+import { CoverImage } from '../../src/native/musicFiles'
 
 type Props = NativeStackScreenProps<RootStackParamList, 'DiscoverSection'>
 

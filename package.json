@@ -8,7 +8,7 @@
     "lint": "eslint .",
     "start": "react-native start",
     "test": "jest",
-    "postinstall": "patch-package"
+    "postinstall": "node scripts/patch-react-native-codegen.js && patch-package"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^1.18.2",
@@ -38,7 +38,6 @@
     "react-native-screens": "~3.20.0",
     "react-native-svg": "^13.9.0",
     "react-native-track-player": "^3.2.0",
-    "react-native-unimodules": "^0.14.10",
     "react-native-uuid": "^2.0.1",
     "react-native-vector-icons": "^10.3.0",
     "react-redux": "^8.1.1",

@@ -3,7 +3,7 @@ import { View } from 'react-native'
 import styled from 'styled-components/native'
 import LinearGradient from 'react-native-linear-gradient'
 import Icon from 'react-native-vector-icons/Feather'
-import { CoverImage } from 'react-native-get-music-files-v3dev-test'
+import { CoverImage } from '../src/native/musicFiles'
 
 import tokens from '../theme/tokens'
 import { Colors } from '../Constants'

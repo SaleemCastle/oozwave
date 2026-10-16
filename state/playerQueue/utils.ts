@@ -16,7 +16,7 @@ export const ensureFileUrl = (path: string): string => {
     if (!path) {
         return ''
     }
-    if (path.startsWith('file://')) {
+    if (/^[a-z][a-z0-9+.-]*:\/\//i.test(path)) {
         return path
     }
     const sanitized = path.replace(/^file:\/\//, '')

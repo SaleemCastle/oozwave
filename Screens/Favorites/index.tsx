@@ -11,7 +11,7 @@ import { selectFavoriteTracks, toggleFavorite } from '../../state/favorites'
 import { ITrack } from '../../Store/Actions/currentTrack.actions'
 import { playTracksNow } from '../../state/playerQueue'
 import { trackToQueueItem } from '../../state/playerQueue/utils'
-import { CoverImage } from 'react-native-get-music-files-v3dev-test'
+import { CoverImage } from '../../src/native/musicFiles'
 
 const Favorites: React.FC = () => {
   const dispatch = useAppDispatch()

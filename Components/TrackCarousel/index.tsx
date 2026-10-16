@@ -1,7 +1,7 @@
 import React, { useRef } from 'react'
 import { View, Image, Dimensions, StyleSheet, Animated, TouchableWithoutFeedback } from 'react-native'
 import { ITrack } from '../../Store/Actions/currentTrack.actions'
-import { CoverImage } from 'react-native-get-music-files-v3dev-test'
+import { CoverImage } from '../../src/native/musicFiles'
 import { Images } from '../../Constants'
 
 interface TrackCarouselProps {
